@@ -16,6 +16,14 @@ Highlight a passage and ask a question. The quote and its page location travel w
 
 ![Article beside Agent, with the selected passage in the composer](docs/assets/read-with-agent.png)
 
+## Chat with PDF
+
+Reading a paper or report in Chrome? Select a passage, right-click **Quote in Agent**, and ask Codex to explain it. For questions about the whole document, attach the PDF so Codex can read its text page by page.
+
+![PDF passage quoted in Agent with a follow-up question and the source document](docs/assets/chat-with-pdf.png)
+
+<sub>Text-based PDFs supported. Scanned PDFs need OCR first; browser selections do not include exact PDF page coordinates.</sub>
+
 ## Compare your open tabs
 
 “Which plan is best for a team of five?” Let Codex read the live pages and compare them. Choose access to **this window** or **all browser windows**.
@@ -36,6 +44,7 @@ The [official ChatGPT/Codex browser extension](https://learn.chatgpt.com/docs/ch
 
 | What you want                       | Browser Agent Connector                                                                            |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Discuss PDFs                        | Quote a passage from Chrome’s PDF viewer, or attach a PDF for page-by-page text reading.           |
 | Less waiting to start               | Keeps a spare app-server session and, when signed in, a thread prewarmed.                          |
 | More room for the same conversation | Open a full Agent tab; messages, drafts, and attachments stay synchronized with the sidebar.       |
 | A fresh take on the same page       | **+** creates an empty Agent tab with the same webpage, model, reasoning effort, and access scope. |
