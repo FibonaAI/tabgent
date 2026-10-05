@@ -64,6 +64,7 @@ function connect() {
   native.onDisconnect.addListener(() => {
     const message = chrome.runtime.lastError?.message || '';
     native = null;
+    for (const r of requests.values()) r.reject?.(Error('Codex disconnected'));
     requests.clear();
     const missing = /native messaging host not found/i.test(message);
     for (const s of sessions.values()) {
@@ -108,7 +109,33 @@ async function receive(message) {
         typeof m.params.arguments === 'string'
           ? JSON.parse(m.params.arguments)
           : m.params.arguments;
-      const value = await browserTool(s, args);
+      const value = await browserTool(
+        s,
+        args,
+        (params) =>
+          new Promise((resolve, reject) => {
+            const id = ++sequence;
+            const timer = setTimeout(() => {
+              requests.delete(id);
+              reject(Error('PDF read timed out'));
+            }, 30000);
+            requests.set(id, {
+              resolve: (value) => {
+                clearTimeout(timer);
+                resolve(value);
+              },
+              reject: (error) => {
+                clearTimeout(timer);
+                reject(error);
+              },
+            });
+            connect().postMessage({
+              op: 'rpc',
+              session: s.id,
+              message: { id, method: 'bridge/pdf/read', params },
+            });
+          }),
+      );
       result = {
         success: true,
         contentItems: value?.data
@@ -135,6 +162,11 @@ async function receive(message) {
     const r = requests.get(m.id);
     if (r) {
       requests.delete(m.id);
+      if (r.resolve) {
+        if (m.error) r.reject(Error(m.error.message));
+        else r.resolve(m.result);
+        return;
+      }
       if (r.method === 'turn/start' && m.error) s.turnPending = false;
       event(r.port, 'codex-message', { ...m, id: r.id });
     }
@@ -327,34 +359,37 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       });
       if (!frame || (sender.documentId && frame.documentId !== sender.documentId))
         throw Error('Stale selection');
-      const s = await getSession(sender.tab.id);
-      if (msg.type === 'pageSelectionCleared') {
-        if (
-          !msg.selectionId ||
-          s.selection?.selectionId !== msg.selectionId ||
-          s.selection.frameId !== sender.frameId ||
-          s.selection.documentId !== sender.documentId
-        )
-          return {};
-        s.selection = null;
+      await getSession(sender.tab.id);
+      for (const s of sessions.values()) {
+        if (s.tabId !== sender.tab.id) continue;
+        if (msg.type === 'pageSelectionCleared') {
+          if (
+            !msg.selectionId ||
+            s.selection?.selectionId !== msg.selectionId ||
+            s.selection.frameId !== sender.frameId ||
+            s.selection.documentId !== sender.documentId
+          )
+            continue;
+          s.selection = null;
+          await persist();
+          for (const p of s.ports) event(p, 'codex-selection', null);
+          continue;
+        }
+        s.selection = {
+          selectionId: msg.selectionId,
+          id: crypto.randomUUID(),
+          text: msg.text.slice(0, 20000),
+          truncated: !!msg.truncated || msg.text.length > 20000,
+          url: sender.url,
+          title: typeof msg.title === 'string' ? msg.title.slice(0, 500) : '',
+          frameId: sender.frameId,
+          documentId: sender.documentId,
+          tabId: sender.tab.id,
+          locator: msg.locator && JSON.stringify(msg.locator).length < 24000 ? msg.locator : null,
+        };
         await persist();
-        for (const p of s.ports) event(p, 'codex-selection', null);
-        return {};
+        for (const p of s.ports) event(p, 'codex-selection', s.selection);
       }
-      s.selection = {
-        selectionId: msg.selectionId,
-        id: crypto.randomUUID(),
-        text: msg.text.slice(0, 20000),
-        truncated: !!msg.truncated || msg.text.length > 20000,
-        url: sender.url,
-        title: typeof msg.title === 'string' ? msg.title.slice(0, 500) : '',
-        frameId: sender.frameId,
-        documentId: sender.documentId,
-        tabId: sender.tab.id,
-        locator: msg.locator && JSON.stringify(msg.locator).length < 24000 ? msg.locator : null,
-      };
-      await persist();
-      for (const p of s.ports) event(p, 'codex-selection', s.selection);
       return {};
     }
     if (!sender.url?.startsWith(chrome.runtime.getURL(''))) throw Error('Invalid sender');
@@ -404,12 +439,13 @@ chrome.tabs.onRemoved.addListener(async (id) => {
 });
 chrome.webNavigation.onCommitted.addListener(async (detail) => {
   await loaded;
-  const s = sessions.get(agentViews.has(detail.tabId) ? `sidebar:${detail.tabId}` : detail.tabId);
-  if (!s) return;
-  if (s.selection && (detail.frameId === 0 || s.selection.frameId === detail.frameId)) {
-    s.selection = null;
-    await persist();
-    for (const p of s.ports) event(p, 'codex-selection', null);
+  for (const s of sessions.values()) {
+    if (s.tabId !== detail.tabId) continue;
+    if (s.selection && (detail.frameId === 0 || s.selection.frameId === detail.frameId)) {
+      s.selection = null;
+      await persist();
+      for (const p of s.ports) event(p, 'codex-selection', null);
+    }
   }
 });
 loaded.then(connect);
@@ -430,32 +466,35 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   // Invoke synchronously while Chrome's context-menu user gesture is active.
   chrome.sidePanel.open({ tabId: tab.id }).catch(() => {});
   void (async () => {
-    const s = await getSession(tab.id),
-      text = info.selectionText;
-    const existing =
-      s.selection?.text === text &&
-      s.selection?.url === (info.frameUrl || info.pageUrl) &&
-      s.selection?.frameId === (info.frameId || 0) &&
-      Date.now() - Date.parse(s.selection?.locator?.capturedAt) < 2000
-        ? s.selection
-        : null;
-    s.selection = {
-      ...existing,
-      id: crypto.randomUUID(),
-      text: text.slice(0, 20000),
-      truncated: text.length > 20000,
-      url: info.frameUrl || info.pageUrl,
-      title: tab.title || '',
-      tabId: tab.id,
-      frameId: info.frameId || 0,
-      locator: existing?.locator || {
-        kind: 'native-selection',
-        pageUrl: info.pageUrl,
-        frameUrl: info.frameUrl,
-        positionAvailable: false,
-      },
-    };
-    await persist();
-    for (const p of s.ports) event(p, 'codex-selection', s.selection);
+    await getSession(tab.id);
+    for (const s of sessions.values()) {
+      if (s.tabId !== tab.id) continue;
+      const text = info.selectionText;
+      const existing =
+        s.selection?.text === text &&
+        s.selection?.url === (info.frameUrl || info.pageUrl) &&
+        s.selection?.frameId === (info.frameId || 0) &&
+        Date.now() - Date.parse(s.selection?.locator?.capturedAt) < 2000
+          ? s.selection
+          : null;
+      s.selection = {
+        ...existing,
+        id: crypto.randomUUID(),
+        text: text.slice(0, 20000),
+        truncated: text.length > 20000,
+        url: info.frameUrl || info.pageUrl,
+        title: tab.title || '',
+        tabId: tab.id,
+        frameId: info.frameId || 0,
+        locator: existing?.locator || {
+          kind: 'native-selection',
+          pageUrl: info.pageUrl,
+          frameUrl: info.frameUrl,
+          positionAvailable: false,
+        },
+      };
+      await persist();
+      for (const p of s.ports) event(p, 'codex-selection', s.selection);
+    }
   })();
 });

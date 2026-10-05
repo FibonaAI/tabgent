@@ -307,6 +307,24 @@ class Session:
 
     def request(self, message):
         method = message.get("method")
+        if method == "bridge/pdf/read":
+            try:
+                params = message["params"]
+                result = attachments.read_pdf(
+                    params["data"], params.get("page", 1), params.get("offset", 0)
+                )
+                self.emit({"id": message["id"], "result": result})
+            except Exception:
+                self.emit(
+                    {
+                        "id": message["id"],
+                        "error": {
+                            "code": -32000,
+                            "message": "PDF could not be read; use a screenshot of the current PDF or check the requested page",
+                        },
+                    }
+                )
+            return
         if method == "bridge/attachment/save":
             try:
                 result = attachments.save(

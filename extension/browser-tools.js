@@ -16,9 +16,10 @@ export async function context(session) {
   return {
     scope: session.scope,
     page: !tab.incognito && (allowed(tab) || agentPage) ? tab : null,
+    ...(allowed(tab) && !newTab(tab) ? { contentType: await contentType(tab.id) } : {}),
   };
 }
-export async function browserTool(session, args) {
+export async function browserTool(session, args, readPdf) {
   if (!args || typeof args.action !== 'string') throw Error('A browser action is required');
   args = { ...args };
   const framed = /^frame=(\d+);([\s\S]+)$/.exec(args.selector || '');
@@ -37,12 +38,12 @@ export async function browserTool(session, args) {
     throw Error('Another browser operation is running in this tab; retry sequentially');
   busyTabs.add(id);
   try {
-    return await operate(session, args, id);
+    return await operate(session, args, id, readPdf);
   } finally {
     busyTabs.delete(id);
   }
 }
-async function operate(session, args, id) {
+async function operate(session, args, id, readPdf) {
   if (args.action === 'context') return context(session);
   const tabs = await available(session);
   if (args.action === 'tabs')
@@ -97,6 +98,50 @@ async function operate(session, args, id) {
   } else if (args.action === 'reload') {
     await chrome.tabs.reload(id);
     result = { success: true };
+  } else if (args.action === 'read' && (await contentType(id)) === 'application/pdf') {
+    if (!readPdf) throw Error('PDF reader unavailable');
+    const tab = tabs.find((t) => t.id === id);
+    const response = await fetch(tab.url, {
+      credentials: 'include',
+      signal: AbortSignal.timeout(20000),
+    });
+    if (!response.ok) throw Error(`PDF download failed (${response.status})`);
+    const reader = response.body.getReader(),
+      parts = [];
+    let size = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        size += value.length;
+        if (size > 10 * 1024 * 1024) throw Error('PDF exceeds the 10 MB reading limit');
+        parts.push(value);
+      }
+    } finally {
+      await reader.cancel();
+    }
+    await check();
+    if ((await chrome.tabs.get(id)).url !== tab.url) throw Error('Page changed; read again');
+    const bytes = new Uint8Array(size);
+    let offset = 0;
+    for (const part of parts) {
+      bytes.set(part, offset);
+      offset += part.length;
+    }
+    if (!new TextDecoder().decode(bytes.subarray(0, 1024)).includes('%PDF-'))
+      throw Error('The current URL did not return a PDF; it may require sign-in');
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 32768)
+      binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
+    result = {
+      url: tab.url,
+      title: tab.title,
+      contentType: 'application/pdf',
+      ...(await readPdf({ data: btoa(binary), page: args.page ?? 1, offset: args.offset ?? 0 })),
+      controls: [],
+      interaction:
+        'Use screenshot, click/drag coordinates, scroll, and press to operate this PDF in place.',
+    };
   } else if (args.action === 'read' || args.action === 'frames') {
     const frames = await chrome.webNavigation.getAllFrames({ tabId: id });
     const selected =
@@ -179,6 +224,17 @@ async function operate(session, args, id) {
   }
   await check();
   return result;
+}
+async function contentType(tabId) {
+  try {
+    const [result] = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => document.contentType,
+    });
+    return result?.result;
+  } catch {
+    return undefined;
+  }
 }
 function pageAction(args) {
   if (/(?:recaptcha|hcaptcha\.com|challenges\.cloudflare\.com\/.*turnstile)/i.test(location.href))

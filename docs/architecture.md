@@ -38,7 +38,9 @@ There are no webpage overlays, layout menus, or persisted layout preferences.
 The service worker checks tool scope on every request. Selection messages derive
 the owner tab and frame from Chrome's sender metadata, not a page-supplied tab ID.
 DOM locations are historical hints and must be checked against the live page.
-Native PDF context-menu selection has no reliable DOM range or page coordinates.
+Chrome’s native PDF viewer does not expose live selections to content scripts. Select text and use the **Quote in Agent** context menu; the quote is delivered to conversations bound to that PDF, including full Agent tabs. Native PDF quotes have no reliable DOM range or page coordinates.
+
+For an HTTP(S) PDF tab, `browser read` fetches the original PDF in Chrome and sends its bytes to the native host for PDFKit text extraction. It returns a requested page, page count, and text offsets without navigating to an HTML substitute. Reads are limited to 10 MB; temporary files are deleted after extraction. Screenshot, pointer, keyboard, and scroll tools operate the PDF viewer directly. Scanned pages require visual inspection; text extraction does not perform OCR.
 
 ## Working on the UI
 

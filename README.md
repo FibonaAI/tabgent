@@ -18,11 +18,11 @@ Highlight a passage and ask a question. The quote and its page location travel w
 
 ## Chat with PDF
 
-Reading a paper or report in Chrome? Select a passage, right-click **Quote in Agent**, and ask Codex to explain it. For questions about the whole document, attach the PDF so Codex can read its text page by page.
+Reading a paper or report in Chrome? Select a passage, right-click **Quote in Agent**, and ask Codex to explain it. Codex can read the open PDF directly, page by page, without switching to an HTML version. You can also attach a PDF.
 
 ![PDF passage quoted in Agent with a follow-up question and the source document](docs/assets/chat-with-pdf.png)
 
-<sub>Text-based PDFs supported. Scanned PDFs need OCR first; browser selections do not include exact PDF page coordinates.</sub>
+<sub>Direct reads support online PDFs up to 10 MB. Scanned pages can be inspected with screenshots; text extraction needs OCR. Browser selections do not include exact PDF page coordinates.</sub>
 
 ## Compare your open tabs
 

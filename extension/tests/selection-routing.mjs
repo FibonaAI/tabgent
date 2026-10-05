@@ -15,7 +15,15 @@ globalThis.chrome = {
     connectNative: () => native,
   },
   scripting: { executeScript: async () => [] },
-  storage: { session: { get: async () => ({}), set: async () => {} } },
+  storage: {
+    session: {
+      get: async () => ({
+        conversations: [['clone', { key: 'clone', id: 'clone', tabId: 1, viewOnly: true }]],
+        agentViews: [[3, 'clone']],
+      }),
+      set: async () => {},
+    },
+  },
   sidePanel: { setPanelBehavior: async () => {} },
   tabs: {
     get: async (id) => ({ id, windowId: 1, url: 'https://example.test/' }),
@@ -31,7 +39,11 @@ async function attach(id) {
   const messages = [],
     port = {
       name: 'chat',
-      sender: { url: 'chrome-extension://test/ui/chat.html', id: 'test' },
+      sender: {
+        url: 'chrome-extension://test/ui/chat.html',
+        id: 'test',
+        ...(id === 3 ? { tab: { id: 3 } } : {}),
+      },
       onMessage: event(),
       onDisconnect: event(),
       postMessage: (m) => messages.push(m),
@@ -41,7 +53,8 @@ async function attach(id) {
   return { port, messages };
 }
 const one = await attach(1),
-  two = await attach(2);
+  two = await attach(2),
+  clone = await attach(3);
 const source = {
   id: 'test',
   tab: { id: 1 },
@@ -61,6 +74,7 @@ const call = (m, s) =>
 await call(message, source);
 const selected = one.messages.at(-1).value;
 assert.equal(selected.text, 'quotation');
+assert.equal(clone.messages.at(-1).value.text, 'quotation');
 assert.equal(selected.url, source.url);
 assert.equal(two.messages.length, 1, 'Cannot attach to a tab supplied by page content');
 await one.port.onMessage.listeners[0]({
@@ -93,3 +107,20 @@ assert.equal(one.messages.at(-1).value, null);
 console.log(
   'PASS owner routing / source URL / clear identity / stale and private rejection / frame navigation clears',
 );
+
+chrome.sidePanel.open = async () => {};
+chrome.contextMenus.onClicked.listeners[0](
+  {
+    menuItemId: 'quote-selection',
+    selectionText: 'PDF quote',
+    pageUrl: 'https://example.test/paper.pdf',
+  },
+  { id: 1, title: 'Paper' },
+);
+await new Promise((r) => setTimeout(r, 0));
+assert.equal(one.messages.at(-1).value.text, 'PDF quote');
+assert.equal(clone.messages.at(-1).value.text, 'PDF quote');
+assert.equal(clone.messages.at(-1).value.locator.kind, 'native-selection');
+await chrome.webNavigation.onCommitted.listeners[0]({ tabId: 1, frameId: 0 });
+assert.equal(clone.messages.at(-1).value, null);
+console.log('PASS PDF quotes and navigation clearing reach cloned conversations');

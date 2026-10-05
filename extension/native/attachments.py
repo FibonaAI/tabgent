@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import tempfile
 import uuid
 import zipfile
 import xml.etree.ElementTree as ET
@@ -123,3 +124,11 @@ def preview(root, args):
     if not mime:
         raise ValueError("Not an image attachment")
     return {"url": "data:" + mime + ";base64," + base64.b64encode(raw).decode()}
+
+
+def read_pdf(data, page=1, offset=0):
+    """Read bytes fetched by Chrome from the scoped tab, without retaining a copy."""
+    with tempfile.TemporaryDirectory(prefix="browser-agent-pdf-") as folder:
+        root = Path(folder)
+        saved = save(root, "document.pdf", data)
+        return read(root, {**saved, "page": page, "offset": offset})

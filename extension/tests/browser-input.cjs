@@ -1,9 +1,16 @@
 const assert = require('node:assert/strict'),
-  http = require('node:http');
+  http = require('node:http'),
+  fs = require('node:fs'),
+  { execFileSync } = require('node:child_process');
 const { chromium } = require('playwright');
 (async () => {
   const server = http
     .createServer((req, res) => {
+      if (req.url === '/document') {
+        res.setHeader('Content-Type', 'application/pdf');
+        res.end(fs.readFileSync(__dirname + '/fixtures/text.pdf'));
+        return;
+      }
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       if (req.url === '/frame') {
         res.end(
@@ -111,6 +118,37 @@ const { chromium } = require('playwright');
   await page.waitForURL(url + 'next', { waitUntil: 'commit', timeout: 10000 });
   await run({ action: 'reload' });
   console.log('PASS back / forward / reload / bounds guards');
+  await control.exposeFunction('readPdfBytes', (params) =>
+    JSON.parse(
+      execFileSync(
+        process.env.PYTHON || 'python3',
+        [
+          '-c',
+          'import sys,json;sys.path.insert(0,"extension/native");import attachments;p=json.load(sys.stdin);print(json.dumps(attachments.read_pdf(p["data"],p["page"],p["offset"])))',
+        ],
+        { input: JSON.stringify(params), encoding: 'utf8' },
+      ),
+    ),
+  );
+  await page.goto(url + 'document');
+  assert.equal((await run({ action: 'context' })).contentType, 'application/pdf');
+  const pdf = await control.evaluate(async (id) => {
+    const { browserTool } = await import('./browser-tools.js');
+    return browserTool(
+      { tabId: id, scope: 'window' },
+      { action: 'read', page: 1 },
+      window.readPdfBytes,
+    );
+  }, id);
+  assert.equal(pdf.pages, 1);
+  assert(pdf.text.includes('Read directly from PDF.'));
+  assert.equal(pdf.contentType, 'application/pdf');
+  assert.equal(page.url(), url + 'document');
+  await run({ action: 'screenshot' });
+  await run({ action: 'scroll', pixels: 200 });
+  console.log(
+    'PASS native PDF without .pdf suffix: context, direct text read, screenshot and scrolling',
+  );
   await page.close({ runBeforeUnload: true });
   await control.close({ runBeforeUnload: true });
   server.close();
