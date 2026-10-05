@@ -1,0 +1,24 @@
+{
+  "name": "browser-agent-connector",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bring Codex into Chrome: one conversation per tab, live page context, and scoped browser tools.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "node scripts/check.cjs",
+    "test": "npm run check && node scripts/test.cjs",
+    "dev": "node scripts/launch-dev.cjs",
+    "package": "python3 scripts/package.py",
+    "format": "prettier --write extension scripts .github docs README.md CONTRIBUTING.md SECURITY.md .prettierrc.json package.json",
+    "format:check": "prettier --check extension scripts .github docs README.md CONTRIBUTING.md SECURITY.md .prettierrc.json package.json",
+    "test:browser": "node scripts/test-browser-input.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1",
+    "prettier": "3.9.9"
+  },
+  "type": "module"
+}

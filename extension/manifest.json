@@ -1,0 +1,52 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extensionName__",
+  "description": "__MSG_extensionDescription__",
+  "version": "0.1.0",
+  "minimum_chrome_version": "142",
+  "default_locale": "en",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyMiIFYA3ghG727zaK7md1UcuvajRK3km/K3uUXrwK9USWrz7RiqkgRHG16o8uZuAJBogEGoloWW4JaMTsegNFdVzzi7J13E+ETYdF8Ykrl7EUaWFdloLd32dNQND9aAPOCE6qF2WOTQNdqLpeEGTNKhNE6OrU+PWLM0mMg5ZaPJLp8qoYxHXXqmMwR1EVyu0xORKVVIz4cD25tzuzssOX30CbysxRzJ5YpbGfFx/UPrTKAuw6QTbQOu94D4GGSCW35Ksonb3nF5gG6fPrhgCQJVDomWJI71GTa8fZJp5A9VDZA5fZytzvN/MExMyxHpCFzf6AB9N6/Q65m2bkjaDmwIDAQAB",
+  "permissions": [
+    "tabs",
+    "storage",
+    "scripting",
+    "nativeMessaging",
+    "sidePanel",
+    "webNavigation",
+    "debugger",
+    "contextMenus"
+  ],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "ui/chat.html"
+  },
+  "action": {
+    "default_title": "__MSG_toggleAgent__",
+    "default_icon": {
+      "16": "icons/app-16.png",
+      "32": "icons/app-32.png"
+    }
+  },
+  "incognito": "not_allowed",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none';"
+  },
+  "icons": {
+    "16": "icons/app-16.png",
+    "32": "icons/app-32.png",
+    "48": "icons/app-48.png",
+    "128": "icons/app-128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["selection-content.js"],
+      "all_frames": true,
+      "run_at": "document_idle"
+    }
+  ]
+}

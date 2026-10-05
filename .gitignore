@@ -1,0 +1,16 @@
+# Generated dependencies, archives, caches, and local data
+/node_modules/
+/dist/
+/.venv/
+__pycache__/
+*.py[cod]
+.DS_Store
+*.log
+.env
+.env.*
+!.env.example
+/coverage/
+/test-results/
+/playwright-report/
+*.crx
+*.pem

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="tile" x1="5" y1="2" x2="27" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8674EF"/>
+      <stop offset="1" stop-color="#5846C9"/>
+    </linearGradient>
+    <mask id="back-link">
+      <rect width="32" height="32" fill="white"/>
+      <circle cx="17" cy="8" r="1.65" fill="black"/>
+    </mask>
+    <mask id="front-link">
+      <rect width="32" height="32" fill="white"/>
+      <circle cx="15" cy="24" r="1.65" fill="black"/>
+    </mask>
+  </defs>
+  <rect x="1" y="1" width="30" height="30" rx="8" fill="url(#tile)"/>
+  <!-- Alternating over/under crossings make the two frames interlock. -->
+  <g stroke="#D5CCFF" stroke-width="1.1">
+    <rect x="2.7" y="5" width="14.3" height="19" rx="2.5" mask="url(#back-link)"/>
+    <rect x="15" y="8" width="14.3" height="19" rx="2.5" mask="url(#front-link)"/>
+  </g>
+  <g stroke="#F3FAFC" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke="#A9DFFF" transform="translate(-.5 0)" d="M6.3 20.5V9H9C13.6 9 13.6 14.6 9 14.6H6.3M9 14.6C14 14.6 14 20.5 9 20.5H6.3"/>
+    <path stroke="#F0D2FF" transform="translate(.5 0)" d="M19.5 23L22.2 12H22.6L26 23M20.5 19.4H24.8"/>
+  </g>
+</svg>
