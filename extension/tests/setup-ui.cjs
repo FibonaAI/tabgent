@@ -303,13 +303,34 @@ export function saveScopePreference(){}
           name: 'test.png',
           mimeType: 'image/png',
           buffer: Buffer.from(
-            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aEn8AAAAASUVORK5CYII=',
+            await page.evaluate(() => {
+              const canvas = document.createElement('canvas');
+              canvas.width = 144;
+              canvas.height = 108;
+              return canvas.toDataURL('image/png').split(',')[1];
+            }),
             'base64',
           ),
         });
         await page.waitForFunction(() => document.querySelectorAll('.attachment').length === 1);
         assert.equal(await page.locator('.attachment img').count(), 1);
         const thumbnail = page.locator('.attachment img');
+        await thumbnail.evaluate((img) => img.decode());
+        const imageBox = await thumbnail.boundingBox();
+        const removeBox = await page.locator('.image-attachment button').boundingBox();
+        assert(
+          Math.abs(removeBox.y - imageBox.y - 3) < 1,
+          'Remove button aligns with actual image top',
+        );
+        assert(
+          Math.abs(imageBox.x + imageBox.width - removeBox.x - removeBox.width - 3) < 1,
+          'Remove button aligns with actual image right edge',
+        );
+        assert(
+          Math.abs(imageBox.width / imageBox.height - 144 / 108) < 0.01,
+          'Thumbnail keeps image proportions',
+        );
+
         await thumbnail.click();
         assert(await page.locator('#imagePreview').isVisible());
         assert.equal(

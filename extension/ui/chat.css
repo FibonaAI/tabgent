@@ -779,9 +779,9 @@ select option {
 .image-attachment {
   position: relative;
   display: block;
-  flex: 0 0 72px;
-  width: 72px;
-  height: 72px;
+  flex: none;
+  width: fit-content;
+  height: fit-content;
   padding: 0;
   border: 0;
   background: transparent;
@@ -789,9 +789,10 @@ select option {
 }
 .image-attachment img {
   display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+  width: auto;
+  height: auto;
+  max-width: 96px;
+  max-height: 72px;
   border-radius: 8px;
 }
 .attachment span {
