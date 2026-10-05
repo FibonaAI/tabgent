@@ -1,3 +1,4 @@
+import { createFollowups, selectionContextPrefix } from './followups.js';
 import { createCommands } from './commands.js';
 import { marked } from '../vendor/marked/marked.js';
 import DOMPurify from '../vendor/dompurify/purify.js';
@@ -39,8 +40,10 @@ let turnId = null,
   threadCwd = null;
 const pending = new Map(),
   items = new Map();
-let optimisticUser = null,
-  turnStatus = null,
+const optimisticUsers = [];
+let sending = false,
+  stopping = false;
+let turnStatus = null,
   turnStartedAt = 0,
   activeReply = null,
   worklog = null;
@@ -64,8 +67,19 @@ function resizePrompt() {
   prompt.style.height = '0px';
   prompt.style.height = (prompt.value ? Math.min(prompt.scrollHeight, 220) : 56) + 'px';
   $('attach').disabled = !ready;
+  const hasDraft = !!prompt.value.trim() || !!attachments.length;
+  $('send').hidden = busy && !hasDraft;
   $('send').disabled =
-    !ready || attaching > 0 || (!$('prompt').value.trim() && !attachments.length);
+    !ready || sending || stopping || attaching > 0 || !hasDraft || (busy && !turnId);
+  $('send').title = i18n(busy ? 'steerHint' : 'sendHint');
+  $('send').setAttribute('aria-label', i18n(busy ? 'steerLabel' : 'sendLabel'));
+  $('queue').hidden = !busy || !hasDraft;
+  $('queue').disabled = $('send').disabled;
+  $('stop').hidden = !busy;
+  $('stop').disabled = stopping || !turnId;
+  $('stop').title = i18n(stopping ? 'stopping' : 'stopHint');
+  $('prompt').placeholder = i18n(busy ? 'followupPlaceholder' : 'promptPlaceholder');
+  $('keyboardHint').textContent = i18n(busy ? 'runningKeyboardHint' : 'keyboardHint');
 }
 function nearBottom() {
   return $('scroll').scrollHeight - $('scroll').scrollTop - $('scroll').clientHeight < 100;
@@ -142,6 +156,7 @@ function finishWorklog(seconds) {
 }
 function updateTurnStatus(text) {
   if (!busy || !turnStatus) return;
+  if (stopping) text = i18n('stopping');
   if (turnStatus.textContent !== text) turnStatus.textContent = text;
   if ($('messages').lastElementChild !== turnStatus) $('messages').append(turnStatus);
 }
@@ -179,11 +194,9 @@ function setBusy(value, outcome = 'completed') {
     if (follow) requestAnimationFrame(scrollEnd);
   }
   busy = value;
-  $('send').hidden = value;
-  $('stop').hidden = !value;
-  $('attach').disabled = !ready;
-  $('send').disabled =
-    !ready || attaching > 0 || (!$('prompt').value.trim() && !attachments.length);
+  if (!value) stopping = false;
+  resizePrompt();
+  followups.render();
   document.body.classList.toggle('busy', value);
   $('model').disabled = value;
   $('effort').disabled = value;
@@ -399,9 +412,12 @@ function toolDetails(record, item, completed) {
 function renderItem(item, completed = true) {
   if (!item?.id) return;
   let record = items.get(item.id);
-  if (!record && item.type === 'userMessage' && optimisticUser) {
-    record = optimisticUser;
-    optimisticUser = null;
+  const optimisticIndex =
+    item.type === 'userMessage'
+      ? optimisticUsers.findIndex((entry) => entry.clientId === item.clientId)
+      : -1;
+  if (!record && optimisticIndex !== -1) {
+    [record] = optimisticUsers.splice(optimisticIndex, 1);
     items.set(item.id, record);
   }
   if (!record) {
@@ -694,6 +710,7 @@ async function completeSetup() {
     ready = true;
     commands.setMode(bridge.settings?.mode);
     void commands.initialize();
+    void followups.refresh();
     renderAttachments();
     setupMode = '';
     loginAttempt = null;
@@ -720,7 +737,8 @@ async function completeSetup() {
     completingSetup = false;
   }
 }
-async function send() {
+async function send(queue = false) {
+  if (sending || stopping) return;
   const text = $('prompt').value.trim();
   if (ready && text.startsWith('/')) {
     try {
@@ -731,7 +749,8 @@ async function send() {
     }
   }
   if ((!text && !attachments.length) || attaching || !ready) return;
-  const steering = busy;
+  const steering = busy && !queue;
+  const expectedTurnId = turnId;
   if (steering && !turnId) return;
   const selection = selectedPageText;
   const submittedAttachments = [...attachments];
@@ -758,16 +777,26 @@ async function send() {
         (selection.truncated ? '\n' + i18n('selectionLimit') : ''),
       text_elements: [],
     });
-  const el = node('article', '', $('messages'));
+  sending = true;
+  const el = queue ? document.createElement('article') : node('article', '', $('messages'));
   el.className = 'message user';
   renderUserInput(el, input);
-  const submitted = { el, text, type: 'userMessage' };
-  optimisticUser = submitted;
+  const submitted = {
+    el,
+    text,
+    input,
+    selection,
+    expectedTurnId: steering ? expectedTurnId : null,
+    clientId: crypto.randomUUID(),
+    type: 'userMessage',
+  };
+  if (!queue) node('span', i18n('sendingMessage'), el).className = 'delivery-status';
+  if (!queue) optimisticUsers.push(submitted);
   document.body.classList.remove('empty');
   $('prompt').value = '';
   saveDraft();
   resizePrompt();
-  if (!steering) setBusy(true);
+  if (!steering && !queue) setBusy(true);
   requestAnimationFrame(scrollEnd);
   try {
     if ($('title').value === i18n('newChat')) {
@@ -775,21 +804,9 @@ async function send() {
       title(name);
       rpc('thread/name/set', { threadId, name }).catch(() => {});
     }
-    const result = await rpc(steering ? 'turn/steer' : 'turn/start', {
-      threadId,
-      ...(steering
-        ? { expectedTurnId: turnId }
-        : {
-            model: $('model').value || undefined,
-            effort: $('effort').value || undefined,
-            collaborationMode: commands.collaborationMode(),
-          }),
-      input,
-      additionalContext: selection
-        ? { pageSelection: { kind: 'untrusted', value: JSON.stringify(selection) } }
-        : undefined,
-    });
-    if (!steering) turnId = result.turn.id;
+    await (queue ? followups.add(input, selection) : deliverInput(submitted, steering));
+    const delivery = submitted.el.querySelector('.delivery-status');
+    if (delivery && !submitted.undelivered) delivery.textContent = i18n('pendingMessage');
     commands.sent();
     attachments = attachments.filter((a) => !submittedAttachments.includes(a));
     renderAttachments();
@@ -799,17 +816,79 @@ async function send() {
       bridge.send('codexClearSelection', [selection.id]);
     }
   } catch (e) {
-    if (optimisticUser === submitted) {
+    const index = optimisticUsers.indexOf(submitted);
+    if (queue || index !== -1) {
       submitted.el.remove();
-      optimisticUser = null;
-      if (!$('prompt').value) $('prompt').value = text;
+      if (index !== -1) optimisticUsers.splice(index, 1);
+      $('prompt').value = [text, $('prompt').value].filter(Boolean).join('\n\n');
       saveDraft();
       resizePrompt();
     }
-    if (!steering) setBusy(false, 'failed');
+    if (!steering && !queue) setBusy(false, 'failed');
     showError(e.message);
+  } finally {
+    sending = false;
+    resizePrompt();
   }
 }
+function deliverInput(submitted, steering) {
+  return rpc(steering ? 'turn/steer' : 'turn/start', {
+    threadId,
+    clientUserMessageId: submitted.clientId,
+    input: submitted.input,
+    ...(steering
+      ? { expectedTurnId: submitted.expectedTurnId }
+      : {
+          model: $('model').value || undefined,
+          effort: $('effort').value || undefined,
+          collaborationMode: commands.collaborationMode(),
+        }),
+    additionalContext: submitted.selection
+      ? {
+          pageSelection: { kind: 'untrusted', value: JSON.stringify(submitted.selection) },
+        }
+      : undefined,
+  });
+}
+// A steer can be accepted before the model consumes it. Keep the exact payload
+// recoverable if the turn is interrupted before its userMessage acknowledgement.
+function recoverSteer(submitted) {
+  submitted.undelivered = true;
+  const delivery = submitted.el.querySelector('.delivery-status');
+  if (!delivery) return;
+  delivery.replaceChildren(document.createTextNode(i18n('messageNotDelivered') + ' '));
+  const retry = node('button', i18n('resendMessage'), delivery);
+  retry.type = 'button';
+  retry.onclick = async () => {
+    if (!ready || sending || stopping || (busy && !turnId)) return;
+    const steering = busy;
+    submitted.undelivered = false;
+    submitted.clientId = crypto.randomUUID();
+    submitted.expectedTurnId = steering ? turnId : null;
+    sending = true;
+    delivery.textContent = i18n('sendingMessage');
+    if (!steering) setBusy(true);
+    resizePrompt();
+    try {
+      await deliverInput(submitted, steering);
+      if (!submitted.undelivered) delivery.textContent = i18n('pendingMessage');
+    } catch (error) {
+      if (!steering) setBusy(false, 'failed');
+      recoverSteer(submitted);
+      showError(error.message);
+    } finally {
+      sending = false;
+      resizePrompt();
+    }
+  };
+}
+const followups = createFollowups({
+  rpc,
+  i18n,
+  thread: () => threadId,
+  busy: () => busy,
+  showError,
+});
 function question(message) {
   const p = message.params;
   updateTurnStatus(
@@ -1083,6 +1162,9 @@ addWebUiListener('codex-message', (message) => {
       else if (flags.includes('waitingOnUserInput')) updateTurnStatus(i18n('waitingAnswer'));
       break;
     }
+    case 'thread/queue/changed':
+      void followups.refresh();
+      break;
     case 'thread/compacted':
       renderItem({ id: 'compaction-' + Date.now(), type: 'contextCompaction' }, true);
       break;
@@ -1105,6 +1187,7 @@ addWebUiListener('codex-message', (message) => {
       setBusy(true);
       break;
     case 'turn/completed':
+      if (turnId && p.turn.id !== turnId) break;
       turnId = null;
       setBusy(
         false,
@@ -1114,6 +1197,10 @@ addWebUiListener('codex-message', (message) => {
             ? 'stopped'
             : 'completed',
       );
+      if (p.turn.status === 'interrupted' || p.turn.status === 'failed') {
+        for (const submitted of optimisticUsers)
+          if (submitted.expectedTurnId === p.turn.id) recoverSteer(submitted);
+      }
       showError(p.turn.error?.message);
       break;
     case 'error':
@@ -1186,22 +1273,37 @@ function refreshSetup() {
 document.addEventListener('visibilitychange', refreshSetup);
 window.addEventListener('focus', refreshSetup);
 setInterval(refreshSetup, 2000);
-$('send').onclick = send;
+$('send').onclick = () => send();
+$('queue').onclick = () => send(true);
 $('prompt').onkeydown = (e) => {
+  if (e.isComposing || e.keyCode === 229) return;
   if (commands.keydown(e)) {
     e.preventDefault();
     return;
   }
-  if (e.key === 'Escape' && busy) {
+  if (e.key === 'Tab' && !e.shiftKey && busy && ($('prompt').value.trim() || attachments.length)) {
     e.preventDefault();
-    $('stop').click();
+    void send(true);
     return;
   }
-  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+  if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault();
     send();
   }
 };
+document.addEventListener('keydown', (event) => {
+  if (
+    event.key !== 'Escape' ||
+    event.defaultPrevented ||
+    event.isComposing ||
+    event.keyCode === 229 ||
+    !busy
+  )
+    return;
+  if (document.querySelector('dialog[open], :popover-open')) return;
+  event.preventDefault();
+  $('stop').click();
+});
 $('prompt').oninput = () => {
   commands.update();
   resizePrompt();
@@ -1220,17 +1322,26 @@ $('reconnect').onclick = () => {
   location.reload();
 };
 $('stop').onclick = async () => {
+  if (stopping || !turnId) return;
+  const interruptedTurn = turnId;
+  stopping = true;
+  resizePrompt();
+  updateTurnStatus(i18n('stopping'));
   try {
-    await commands.interruptGoal();
+    try {
+      await commands.interruptGoal();
+    } catch (error) {
+      showError(error.message);
+    }
+    // The turn may finish while goal pausing is in flight. Never stop its successor.
+    if (turnId === interruptedTurn)
+      await rpc('turn/interrupt', { threadId, turnId: interruptedTurn });
   } catch (e) {
+    stopping = false;
+    resizePrompt();
+    updateTurnStatus(i18n('working'));
     showError(e.message);
   }
-  if (turnId)
-    try {
-      await rpc('turn/interrupt', { threadId, turnId });
-    } catch (e) {
-      showError(e.message);
-    }
 };
 $('model').onchange = () => {
   bridge.settings = { ...bridge.settings, model: $('model').value, effort: undefined };
@@ -1324,7 +1435,8 @@ function renderUserInput(el, input) {
     node('div', lines.join('\n').replace(/^\n/, ''), quote);
   }
   for (const c of input) {
-    if (quotes.includes(c)) continue;
+    if (quotes.includes(c) || (c.type === 'text' && c.text.startsWith(selectionContextPrefix)))
+      continue;
     if (c.type === 'text') node('div', c.text, el);
     else if (
       c.type === 'image' &&

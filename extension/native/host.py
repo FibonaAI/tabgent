@@ -224,25 +224,8 @@ class Session:
             if self.closed:
                 return
             self.process = subprocess.Popen(
-                [
-                    exe,
-                    "app-server",
-                    "--stdio",
-                    "-c",
-                    'web_search="disabled"',
-                    "-c",
-                    "features.shell_tool=false",
-                    "-c",
-                    "features.unified_exec=false",
-                    "-c",
-                    "features.apps=false",
-                    "-c",
-                    "features.multi_agent=false",
-                    "-c",
-                    "features.code_mode=false",
-                    "-c",
-                    "features.code_mode_host=true",
-                ],
+                # Inherit the installed Codex tool configuration; browser tools are additive.
+                [exe, "app-server", "--stdio"],
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,

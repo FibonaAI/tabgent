@@ -49,9 +49,12 @@ There is no automatic file-retention cleanup yet. Browser restarts can lose tab
 pairings even though Codex history remains available.
 
 The connector reuses Codex authentication. It does not copy credentials into the
-extension or rewrite the user's `config.toml`. Shell, desktop app, and multi-agent
-tool restrictions apply to the app-server processes it starts. The attachment
-reader only accepts files under the upload directory.
+extension or rewrite the user's `config.toml`. Native tools, including web search,
+commands and configured integrations, inherit that configuration. Commands and
+file operations retain the connector's read-only sandbox and approval policy.
+Browser tab/window scope applies to the plugin's browser tool; it is not a scope
+restriction on native Codex tools. The attachment reader only accepts files
+under the upload directory.
 
 ## Reporting a concern
 

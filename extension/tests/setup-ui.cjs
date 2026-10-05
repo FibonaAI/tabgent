@@ -9,6 +9,7 @@ const bridge = `
 const listeners=new Map();
 const mode=new URL(location.href).searchParams.get('mode');
 if(!sessionStorage.started){sessionStorage.started='1';sessionStorage.installed=String(mode!=='install');sessionStorage.helper=String(mode!=='helper');sessionStorage.auth=String(['selection','transcript'].includes(mode));sessionStorage.draft='keep my draft';}
+let queueEntries=[];
 let authenticated=sessionStorage.auth==='true';
 const emit=(method,params={})=>listeners.get('codex-message')?.({method,params});
 export const bridge={threadId:null,send(name,args=[]){
@@ -20,7 +21,14 @@ export const bridge={threadId:null,send(name,args=[]){
  const m=args[0];if(m.id===undefined)return;window.setupTest.requests.push(m);
  if(m.method==='turn/start'){window.setupTest.params=m.params;window.setupTest.input=m.params.input;if(window.setupTest.failSend){setTimeout(()=>emit('unused'),0);setTimeout(()=>listeners.get('codex-message')?.({id:m.id,error:{message:'Test send failure'}}),0);return;}}
  if(m.method==='account/login/start'&&mode==='timeout'&&!sessionStorage.retry)return;
+ if(window.setupTest.failMethod===m.method){setTimeout(()=>listeners.get('codex-message')?.({id:m.id,error:{message:'Test action failure'}}),0);return;}
  let result={};
+ if(m.method==='thread/queue/list')result={data:queueEntries,nextCursor:null};
+ if(m.method==='thread/queue/add'){const entry={id:crypto.randomUUID(),clientUserMessageId:m.params.clientUserMessageId,input:m.params.input};queueEntries.push(entry);result={queuedSubmission:entry};}
+ if(m.method==='thread/queue/update'){const entry=queueEntries.find(q=>q.id===m.params.queuedSubmissionId);entry.input=m.params.input;result={queuedSubmission:entry};}
+ if(m.method==='thread/queue/delete'||m.method==='thread/queue/start'){queueEntries=queueEntries.filter(q=>q.id!==m.params.queuedSubmissionId);result=m.method==='thread/queue/start'?{turn:{id:'queue-turn'}}:{deleted:true};}
+ if(m.method==='turn/steer')result={turnId:'test-turn'};
+
  if(m.method==='skills/list')result={data:[{cwd:'/project',errors:[],skills:[{name:'review',path:'/skills/review/SKILL.md',description:'Review a change',enabled:true}]}]};
  if(m.method==='thread/goal/get')result={goal:null};
  if(m.method==='thread/goal/set')result={goal:{objective:m.params.objective||'Test goal',status:m.params.status||'active',tokensUsed:0,timeUsedSeconds:0}};
@@ -30,7 +38,10 @@ export const bridge={threadId:null,send(name,args=[]){
  if(m.method==='model/list')result={data:[{model:'test-model',displayName:'Test model',isDefault:true,supportedReasoningEfforts:[{reasoningEffort:'medium'}]}]};
  if(m.method==='bridge/attachment/save')result={path:'/uploads/'+m.params.name};
  if(m.method==='thread/start'||m.method==='thread/resume')result={thread:{id:'test-thread',turns:[]}};
- setTimeout(()=>listeners.get('codex-message')?.({id:m.id,result}),0);
+ setTimeout(()=>{
+ listeners.get('codex-message')?.({id:m.id,result});
+ if(m.method.startsWith('thread/queue/')&&m.method!=='thread/queue/list')emit('thread/queue/changed',{threadId:'test-thread'});
+ },window.setupTest.delayMethod===m.method?100:0);
  }
 }};
 window.setupTest={emit,requests:[],actions:[],context(value){listeners.get('codex-context')?.(value);},select(value){listeners.get('codex-selection')?.(value);},install(){sessionStorage.installed='true';sessionStorage.helper='true';},externalLogin(){sessionStorage.auth='true';},complete(){authenticated=true;sessionStorage.auth='true';emit('account/login/completed',{success:true,loginId:'test-login'});},fail(){emit('account/login/completed',{success:false,loginId:'test-login'});}};
@@ -175,11 +186,203 @@ export function saveScopePreference(){}
             },
           });
         });
+        await page.evaluate(() => {
+          const m = setupTest.requests.find((r) => r.method === 'turn/start');
+          setupTest.emit('item/started', {
+            threadId: 'test-thread',
+            item: {
+              id: 'initial-user',
+              clientId: m.params.clientUserMessageId,
+              type: 'userMessage',
+              content: m.params.input,
+            },
+          });
+        });
         assert(await page.locator('.worklog').isVisible());
         assert((await page.locator('.worklog').innerText()).includes('Checking the page'));
         await page.locator('#prompt').fill('Focus on the introduction');
         await page.keyboard.press('Enter');
         await page.waitForFunction(() => setupTest.requests.some((r) => r.method === 'turn/steer'));
+        await page.waitForFunction(() => document.querySelector('#prompt').value === '');
+        // The same server client ID reconciles an accepted steer without a duplicate bubble.
+        await page.evaluate(() => {
+          const m = setupTest.requests.findLast((r) => r.method === 'turn/steer');
+          setupTest.emit('item/started', {
+            threadId: 'test-thread',
+            item: {
+              id: 'steer-item',
+              clientId: m.params.clientUserMessageId,
+              type: 'userMessage',
+              content: m.params.input,
+            },
+          });
+        });
+        assert.equal(
+          await page
+            .locator('.message.user')
+            .filter({ hasText: 'Focus on the introduction' })
+            .count(),
+          1,
+        );
+        assert.equal(
+          await page
+            .locator('.message.user')
+            .filter({ hasText: 'Focus on the introduction' })
+            .locator('.delivery-status')
+            .count(),
+          0,
+        );
+        // A rejected steer restores the draft; it never starts a surprise turn.
+        await page.evaluate(() => {
+          setupTest.failMethod = 'turn/steer';
+        });
+        await page.locator('#prompt').fill('Keep this on failure');
+        await page.locator('#send').click();
+        await page.waitForFunction(
+          () => document.querySelector('#prompt').value === 'Keep this on failure',
+        );
+        await page.evaluate(() => {
+          setupTest.failMethod = null;
+        });
+        // Queue keeps selection anchors and attachments, and does not render a sent message.
+        await page.evaluate(() =>
+          setupTest.select({
+            id: 'queue-selection',
+            text: 'Repeated text',
+            title: 'Source',
+            url: 'https://example.test',
+            start: { path: 'main > p:nth-child(2)', offset: 3 },
+            rects: [{ x: 10, y: 20 }],
+          }),
+        );
+        await page.locator('#attachmentFiles').setInputFiles({
+          name: 'notes.txt',
+          mimeType: 'text/plain',
+          buffer: Buffer.from('reference'),
+        });
+        await page.waitForFunction(() => !document.querySelector('#send').disabled);
+        await page.locator('#prompt').fill('Read the selected paragraph next');
+        await page.keyboard.press('Tab');
+        await page.locator('#followups summary').waitFor();
+        const queued = await page.evaluate(
+          () => setupTest.requests.findLast((r) => r.method === 'thread/queue/add').params,
+        );
+        assert(queued.input.some((p) => p.type === 'mention' && p.name === 'notes.txt'));
+        assert(queued.input.some((p) => p.text?.includes('main > p:nth-child(2)')));
+        assert.equal(
+          await page
+            .locator('.message.user')
+            .filter({ hasText: 'Read the selected paragraph next' })
+            .count(),
+          0,
+        );
+        assert.equal(await page.locator('#prompt').inputValue(), '');
+        await page.getByRole('button', { name: 'Edit queued message', exact: true }).click();
+        await page.locator('#queueEditor textarea').fill('Compare that paragraph next');
+        await page
+          .locator('#queueEditor')
+          .getByRole('button', { name: 'Save', exact: true })
+          .click();
+        await page.waitForFunction(() =>
+          document
+            .querySelector('#followups summary')
+            .textContent.includes('Compare that paragraph next'),
+        );
+        const edited = await page.evaluate(
+          () => setupTest.requests.findLast((r) => r.method === 'thread/queue/update').params.input,
+        );
+        assert(edited.some((p) => p.text?.includes('main > p:nth-child(2)')));
+        assert(edited.some((p) => p.type === 'mention'));
+        // An accepted steer not yet consumed remains recoverable after interruption.
+        await page.locator('#prompt').fill('A pending steer');
+        await page.locator('#send').click();
+        await page.waitForFunction(() =>
+          setupTest.requests.some(
+            (r) =>
+              r.method === 'turn/steer' && r.params.input.some((p) => p.text === 'A pending steer'),
+          ),
+        );
+        // Stop remains available with a draft. IME Escape does not interrupt.
+        await page.locator('#prompt').fill('A draft that survives stopping');
+        await page.setViewportSize({ width: 400, height: 800 });
+        const controls = await page.locator('#queue, #send, #stop').evaluateAll((buttons) =>
+          buttons.map((b) => {
+            const r = b.getBoundingClientRect();
+            return { right: r.right, y: r.y, width: r.width };
+          }),
+        );
+        assert(controls.every((b) => b.right <= 400 && b.width > 0));
+        assert(controls.every((b) => Math.abs(b.y - controls[0].y) < 2));
+        if (process.env.BAC_UI_SCREENSHOT)
+          await page.screenshot({ path: process.env.BAC_UI_SCREENSHOT });
+        await page.setViewportSize({ width: 1280, height: 720 });
+
+        await page
+          .locator('#prompt')
+          .dispatchEvent('keydown', { key: 'Escape', isComposing: true });
+        assert.equal(
+          await page.evaluate(
+            () => setupTest.requests.filter((r) => r.method === 'turn/interrupt').length,
+          ),
+          0,
+        );
+        await page.evaluate(() => {
+          setupTest.delayMethod = 'turn/interrupt';
+        });
+        await page.locator('#prompt').press('Escape');
+        await page.waitForFunction(() =>
+          setupTest.requests.some((r) => r.method === 'turn/interrupt'),
+        );
+        assert(await page.locator('#stop').isDisabled());
+        assert.equal(await page.locator('#prompt').inputValue(), 'A draft that survives stopping');
+        await page.evaluate(() =>
+          setupTest.emit('turn/completed', {
+            threadId: 'test-thread',
+            turn: { id: 'test-turn', status: 'interrupted' },
+          }),
+        );
+        assert(await page.locator('#stop').isHidden());
+        await page.getByRole('button', { name: 'Send again', exact: true }).waitFor();
+        assert(
+          (
+            await page.locator('.message.user').filter({ hasText: 'A pending steer' }).innerText()
+          ).includes('Not delivered'),
+        );
+        assert.equal(await page.locator('#followups summary').count(), 1);
+        await page.getByRole('button', { name: 'Send queued message', exact: true }).click();
+        await page.waitForFunction(() =>
+          setupTest.requests.some((r) => r.method === 'thread/queue/start'),
+        );
+        await page.waitForFunction(() => document.querySelector('#followups').hidden);
+        await page.evaluate(() =>
+          setupTest.emit('turn/started', { threadId: 'test-thread', turn: { id: 'test-turn' } }),
+        );
+        await page.getByRole('button', { name: 'Send again', exact: true }).click();
+        await page.waitForFunction(
+          () =>
+            setupTest.requests.filter(
+              (r) =>
+                r.method === 'turn/steer' &&
+                r.params.input.some((p) => p.text === 'A pending steer'),
+            ).length === 2,
+        );
+        const retries = await page.evaluate(() =>
+          setupTest.requests
+            .filter(
+              (r) =>
+                r.method === 'turn/steer' &&
+                r.params.input.some((p) => p.text === 'A pending steer'),
+            )
+            .map((r) => r.params),
+        );
+        assert.deepEqual(retries[0].input, retries[1].input);
+        assert.notEqual(retries[0].clientUserMessageId, retries[1].clientUserMessageId);
+        // Another view's queue changes are refreshed through the server notification.
+        await page.locator('#prompt').fill('Remove this queued message');
+        await page.locator('#queue').click();
+        await page.getByRole('button', { name: 'Remove queued message', exact: true }).waitFor();
+        await page.getByRole('button', { name: 'Remove queued message', exact: true }).click();
+        await page.waitForFunction(() => document.querySelector('#followups').hidden);
         await page.evaluate(() => {
           setupTest.emit('item/completed', {
             threadId: 'test-thread',
@@ -221,7 +424,7 @@ export function saveScopePreference(){}
         assert.equal(errors.length, 0, errors.join('\n'));
         await context.close();
         console.log(
-          'PASS transcript, Markdown safety, skill input, steering, goal, command keyboard and compact work log',
+          'PASS transcript, Markdown, skills, steer acknowledgement/failure, queue/edit/delete/context, stop/IME, narrow composer, goal and commands',
         );
         continue;
       }

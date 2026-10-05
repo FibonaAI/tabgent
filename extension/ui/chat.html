@@ -77,6 +77,7 @@
       <div id="questions"></div>
       <details id="goal" hidden></details>
       <div id="commandMenu" hidden></div>
+      <section id="followups" aria-label="$i18n{queuedMessages}" hidden></section>
       <div class="composer">
         <div id="selection" hidden>
           <button id="selectionText" type="button" aria-expanded="false"></button
@@ -147,6 +148,16 @@
             </button>
           </div>
           <button
+            id="queue"
+            type="button"
+            class="queue-button"
+            title="$i18n{queueHint}"
+            aria-label="$i18n{queueLabel}"
+            hidden
+          >
+            ⇥
+          </button>
+          <button
             id="send"
             class="send"
             aria-label="$i18n{sendLabel}"
@@ -176,9 +187,10 @@
         </div>
       </div>
       <div class="bottom">
-        <span>$i18n{keyboardHint}</span><span id="contextUsage" hidden></span>
+        <span id="keyboardHint">$i18n{keyboardHint}</span><span id="contextUsage" hidden></span>
       </div>
     </footer>
+    <dialog id="queueEditor" aria-label="$i18n{editFollowup}"></dialog>
     <dialog id="commandDialog" aria-label="$i18n{commands}"></dialog>
     <div id="contextDetails" popover>
       <div id="contextFullTitle"></div>

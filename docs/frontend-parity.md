@@ -15,13 +15,26 @@ commit `823ea830c0fd418b09ff02d36cad9a1fff66465b`.
 - `/model`, `/plan`, `/new`, `/rename`, `/compact`, `/status`, `/permissions`,
   `/copy` and `/export` act on the current conversation. Plan mode is shared
   across its views and inherited by new conversations.
-- Enter during a running turn sends `turn/steer`. Stop pauses an active goal
-  before interrupting the turn. Token usage updates the remaining context badge.
+- During a running turn, Enter / Send now uses `turn/steer`; Tab / Queue message
+  uses the app-server's durable `thread/queue/add`. Queued messages are expandable,
+  editable and removable, and refresh across views on `thread/queue/changed`.
+  Codex dispatches them after the running turn. Escape / Stop pauses an active goal
+  and interrupts the current turn; the queue remains available to resume explicitly.
+  Shift + Enter inserts a newline. IME composition never sends or stops a turn.
+- Sending and pending delivery states are reconciled using server `clientId`,
+  including multiple steers. Failed submissions restore the draft; interrupted,
+  unacknowledged steers retain their exact payload behind Send again. Attachments,
+  skills and selection anchors travel with queued follow-ups; because the queue
+  API accepts only UserInput, anchors use a separate explicitly untrusted text
+  block instead of turn/start's `additionalContext` field. The frontend hides this
+  metadata while showing the selected quotation.
+- Token usage updates the remaining context badge.
 
 This is not the proprietary Codex desktop frontend, and pixel-for-pixel desktop
-parity is not claimed. Terminal-specific commands are not exposed. The existing
-browser-only permissions remain in effect: listing a skill does not grant it
-shell, filesystem or other application access. There is no local imitation of
+parity is not claimed. Terminal-specific commands are not exposed. Native tools inherit the installed Codex configuration, including web search,
+command execution and configured integrations. Listing a skill does not grant
+additional permissions: commands and file operations still use the connector's
+read-only sandbox and approval policy. There is no local imitation of
 unsupported backend actions. Unsupported RPCs display the server error.
 
 `extension/tests/setup-ui.cjs` exercises the real UI with controlled protocol

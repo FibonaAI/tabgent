@@ -169,7 +169,7 @@ async function receive(message) {
         else r.resolve(m.result);
         return;
       }
-      if (r.method === 'turn/start' && m.error) s.turnPending = false;
+      if (['turn/start', 'thread/queue/start'].includes(r.method) && m.error) s.turnPending = false;
       event(r.port, 'codex-message', { ...m, id: r.id });
     }
     return;
@@ -280,7 +280,7 @@ chrome.runtime.onConnect.addListener((port) => {
           s.questions = (s.questions || []).filter((q) => q.id !== m.id);
           for (const p of s.ports) event(p, 'codex-question-answered', m.id);
         }
-        if (m.method === 'turn/start') {
+        if (['turn/start', 'thread/queue/start'].includes(m.method)) {
           if (s.turnPending) {
             event(port, 'codex-message', {
               id: m.id,

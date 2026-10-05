@@ -494,7 +494,7 @@
     "message": "Unknown command. Type / to choose a command or skill."
   },
   "browserPermissions": {
-    "message": "Browser actions use the selected scope. This connector keeps filesystem access read-only and disables shell execution; these permissions cannot be widened from this menu."
+    "message": "Browser actions use the selected scope. Codex tools follow your local configuration. Commands and file operations use a read-only sandbox with approval requests; this menu does not change those permissions."
   },
   "planMode": {
     "message": "Plan mode"
@@ -609,5 +609,52 @@
   },
   "requestInputRequired": {
     "message": "Answer each question before continuing."
-  }
+  },
+  "steerHint": {
+    "message": "Send now · Enter"
+  },
+  "steerLabel": {
+    "message": "Send now"
+  },
+  "queueHint": {
+    "message": "Queue message · Tab"
+  },
+  "queueLabel": {
+    "message": "Queue message"
+  },
+  "queuedMessages": {
+    "message": "Queued messages"
+  },
+  "editFollowup": {
+    "message": "Edit queued message"
+  },
+  "removeFollowup": {
+    "message": "Remove queued message"
+  },
+  "startFollowup": {
+    "message": "Send queued message"
+  },
+  "followupPlaceholder": {
+    "message": "Add a follow-up…"
+  },
+  "runningKeyboardHint": {
+    "message": "Enter to send now · Tab to queue · Esc to stop"
+  },
+  "stopHint": {
+    "message": "Stop · Esc"
+  },
+  "stopping": {
+    "message": "Stopping…"
+  },
+  "queued": {
+    "message": "Queued"
+  },
+  "sendingMessage": {
+    "message": "Sending…"
+  },
+  "pendingMessage": {
+    "message": "Pending"
+  },
+  "messageNotDelivered": { "message": "Not delivered" },
+  "resendMessage": { "message": "Send again" }
 }

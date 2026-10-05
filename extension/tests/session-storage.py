@@ -19,6 +19,8 @@ with tempfile.TemporaryDirectory(
     config = Path(directory) / "config.toml"
     config.write_text(
         '# User configuration must survive\nmodel_reasoning_effort="medium"\n'
+        'web_search="live"\n[features]\nshell_tool=true\nunified_exec=true\n'
+        'multi_agent=true\napps=false\ncode_mode=true\n'
     )
     before = config.read_bytes()
     first = host.Session("first", {})
@@ -27,6 +29,16 @@ with tempfile.TemporaryDirectory(
         first.start()
         second.start()
         assert first.ready and second.ready
+        effective = first.rpc("config/read", {})["config"]
+        assert effective["web_search"] == "live", effective
+        for flag in ["shell_tool", "unified_exec", "multi_agent", "code_mode"]:
+            assert effective["features"][flag] is True, flag
+        assert effective["features"]["apps"] is False
+        # Native tools are additive; browser scope and execution approvals remain.
+        params = first.thread_params({"dynamicTools": [{"name": "browser"}]})
+        assert [tool["name"] for tool in params["dynamicTools"]] == ["browser", "read_attachment"]
+        assert params["sandbox"] == "read-only"
+        assert params["approvalPolicy"] == "untrusted"
         assert first.project_id == second.project_id
         project = first.rpc("project/read", {"projectId": first.project_id})["project"]
         assert project["name"] == "Browser Agent Connector"
@@ -39,7 +51,7 @@ with tempfile.TemporaryDirectory(
         assert not (Path(directory) / "auth.json").exists()
         assert not (Path(directory) / "auth.json").is_symlink()
         print(
-            "PASS shared home / stable project / thread assignment / untouched config and auth"
+            "PASS inherited native tool flags / web search / retained approvals / shared home / project / untouched config and auth"
         )
     finally:
         first.close()

@@ -77,3 +77,17 @@ A Chrome extension cannot reproduce all browser chrome or desktop-app behaviors.
 Side-panel opening requires a user gesture; native menus and protected pages have
 separate restrictions. Keep these limitations explicit rather than emulating a
 second browser or silently claiming unsupported capabilities.
+
+## Native Codex tools
+
+The connector launches `codex app-server --stdio` using the user's existing
+`CODEX_HOME`. It adds `browser` and `read_attachment` without disabling Codex's
+native tools or overriding feature flags. Web search mode and configured
+Apps/MCP integrations follow the user's Codex configuration; this does not
+install or authorize integrations or force experimental features on.
+
+Built-in web search handles external research; the browser tool handles the
+companion page and scoped Chrome interaction. Command and file tools retain
+the connector's read-only sandbox and `untrusted` approval policy. Tool
+availability also depends on the installed Codex version and selected model.
+See the [Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference).
