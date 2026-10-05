@@ -38,9 +38,31 @@ There are no webpage overlays, layout menus, or persisted layout preferences.
 The service worker checks tool scope on every request. Selection messages derive
 the owner tab and frame from Chrome's sender metadata, not a page-supplied tab ID.
 DOM locations are historical hints and must be checked against the live page.
-Chrome’s native PDF viewer does not expose live selections to content scripts. Select text and use the **Quote in Agent** context menu; the quote is delivered to conversations bound to that PDF, including full Agent tabs. Native PDF quotes have no reliable DOM range or page coordinates.
+Online PDF documents in top-level tabs are redirected to a bundled PDF.js viewer
+using a response-header declarative rule. The source URL and Chrome tab ID remain
+the conversation context. PDF.js runs locally with PDF JavaScript disabled. It
+provides text-layer selections with page numbers/PDF coordinates, page reads,
+exact text selection, highlights, and annotated PDF downloads. The viewer's
+native annotation tools also support manual comments and edits. Changes must be
+downloaded to save a copy; they are not automatically persisted across reloads.
 
-For an HTTP(S) PDF tab, `browser read` fetches the original PDF in Chrome and sends its bytes to the native host for PDFKit text extraction. It returns a requested page, page count, and text offsets without navigating to an HTML substitute. Reads are limited to 10 MB; temporary files are deleted after extraction. Screenshot, pointer, keyboard, and scroll tools operate the PDF viewer directly. Scanned pages require visual inspection; text extraction does not perform OCR.
+PDF viewer ports are validated by extension URL, tab, frame, and document ID;
+Chrome hides extension documents from `webNavigation.getFrame`. Browser commands
+are still checked against the selected tab/window scope. Vendor files and licenses
+are in `extension/vendor/pdfjs`, with packaging details in its README.
+
+A load failure or **Open in Chrome viewer** installs a tab/URL-specific session
+allow rule before navigating back, preventing redirect loops. Other tabs continue
+to use PDF.js. Embedded PDFs, POST responses, explicit attachment downloads, and
+local files are not automatically redirected. Existing open PDFs use the new
+viewer after reload unless that tab/URL has opted into native fallback.
+
+The native fallback is retained: **Quote in Agent** sends a right-click quote
+without reliable page coordinates. For HTTP(S) PDF tabs, `browser read` fetches
+the original bytes in Chrome and sends them to PDFKit in the native host. These
+reads are limited to 10 MB and temporary files are deleted. Screenshot, pointer,
+keyboard, and scroll tools operate the native viewer directly. Neither text
+reading path implements OCR for scanned pages.
 
 ## Working on the UI
 

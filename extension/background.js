@@ -1,5 +1,7 @@
+import { startPdfRouting, pdfSource, isCurrentPdfSender } from './pdf-routing.js';
 import { tool, instructions } from './session-config.js';
 import { browserTool, context } from './browser-tools.js';
+startPdfRouting();
 const sessions = new Map(),
   requests = new Map(),
   chunks = new Map();
@@ -182,6 +184,24 @@ async function receive(message) {
   broadcast(s, m);
 }
 chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === 'pdf') {
+    void (async () => {
+      await loaded;
+      if (!(await isCurrentPdfSender(port.sender))) return;
+      for (const s of sessions.values()) {
+        if (
+          s.tabId !== port.sender.tab.id ||
+          !s.selection ||
+          s.selection.documentId === port.sender.documentId
+        )
+          continue;
+        s.selection = null;
+        for (const p of s.ports) event(p, 'codex-selection', null);
+      }
+      await persist();
+    })();
+    return;
+  }
   if (port.name !== 'chat') return;
   let session;
   port.onMessage.addListener(async (msg) => {
@@ -343,22 +363,27 @@ async function openAgentTab(session, windowId) {
   return { tabId: tab.id };
 }
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
-  if (sender.id !== chrome.runtime.id) return;
+  if (sender.id !== chrome.runtime.id || msg.type === 'pdfFallback') return;
   (async () => {
     if (msg.type === 'pageSelection' || msg.type === 'pageSelectionCleared') {
       if (
         !sender.tab ||
         sender.tab.incognito ||
-        !/^https?:/.test(sender.url || '') ||
+        (!/^https?:/.test(sender.url || '') && !pdfSource(sender.url)) ||
         (msg.type === 'pageSelection' && (typeof msg.text !== 'string' || !msg.text.trim()))
       )
         throw Error('Invalid selection');
-      const frame = await chrome.webNavigation.getFrame({
-        tabId: sender.tab.id,
-        frameId: sender.frameId,
-      });
-      if (!frame || (sender.documentId && frame.documentId !== sender.documentId))
-        throw Error('Stale selection');
+      if (pdfSource(sender.url)) {
+        // Chrome hides extension documents from webNavigation.getFrame.
+        if (!(await isCurrentPdfSender(sender))) throw Error('Stale PDF selection');
+      } else {
+        const frame = await chrome.webNavigation.getFrame({
+          tabId: sender.tab.id,
+          frameId: sender.frameId,
+        });
+        if (!frame || (sender.documentId && frame.documentId !== sender.documentId))
+          throw Error('Stale selection');
+      }
       await getSession(sender.tab.id);
       for (const s of sessions.values()) {
         if (s.tabId !== sender.tab.id) continue;
@@ -380,7 +405,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
           id: crypto.randomUUID(),
           text: msg.text.slice(0, 20000),
           truncated: !!msg.truncated || msg.text.length > 20000,
-          url: sender.url,
+          url: pdfSource(sender.url) || sender.url,
           title: typeof msg.title === 'string' ? msg.title.slice(0, 500) : '',
           frameId: sender.frameId,
           documentId: sender.documentId,
@@ -470,10 +495,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     for (const s of sessions.values()) {
       if (s.tabId !== tab.id) continue;
       const text = info.selectionText;
+      const pdf = pdfSource(tab.url);
+      const quoteUrl = pdf || info.frameUrl || info.pageUrl;
       const existing =
         s.selection?.text === text &&
-        s.selection?.url === (info.frameUrl || info.pageUrl) &&
-        s.selection?.frameId === (info.frameId || 0) &&
+        s.selection?.url === quoteUrl &&
+        (pdf || s.selection?.frameId === (info.frameId || 0)) &&
         Date.now() - Date.parse(s.selection?.locator?.capturedAt) < 2000
           ? s.selection
           : null;
@@ -482,7 +509,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         id: crypto.randomUUID(),
         text: text.slice(0, 20000),
         truncated: text.length > 20000,
-        url: info.frameUrl || info.pageUrl,
+        url: quoteUrl,
         title: tab.title || '',
         tabId: tab.id,
         frameId: info.frameId || 0,

@@ -6,7 +6,7 @@ function walk(dir) {
   return fs
     .readdirSync(dir, { withFileTypes: true })
     .flatMap((e) =>
-      e.name === '__pycache__'
+      ['__pycache__', 'vendor'].includes(e.name)
         ? []
         : e.isDirectory()
           ? walk(path.join(dir, e.name))

@@ -3,6 +3,7 @@ import { browserTool } from '../browser-tools.js';
 const owner = { id: 1, windowId: 10, url: 'https://example.test/', incognito: false };
 let scripts = 0;
 globalThis.chrome = {
+  runtime: { getURL: (p) => 'chrome-extension://test/' + p },
   tabs: { get: async () => owner, query: async () => [owner] },
   scripting: {
     executeScript: async () => {

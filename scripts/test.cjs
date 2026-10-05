@@ -7,6 +7,7 @@ for (const file of [
   'native-disconnect.mjs',
   'attachments.py',
   'selection.cjs',
+  'pdf.cjs',
   'setup-ui.cjs',
 ]) {
   const python = file.endsWith('.py');

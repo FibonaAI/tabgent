@@ -399,5 +399,20 @@
   },
   "newAgentConversation": {
     "message": "New Agent conversation with the same page and settings"
+  },
+  "pdfOpenNative": {
+    "message": "Open in Chrome viewer"
+  },
+  "pdfLoading": {
+    "message": "Loading PDF\u2026"
+  },
+  "pdfFailed": {
+    "message": "Could not load PDF. Returning to Chrome viewer\u2026"
+  },
+  "pdfInvalid": {
+    "message": "Invalid PDF URL"
+  },
+  "pdfDirty": {
+    "message": "This PDF has unsaved changes. Download a copy before leaving."
   }
 }

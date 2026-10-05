@@ -14,7 +14,8 @@
     "sidePanel",
     "webNavigation",
     "debugger",
-    "contextMenus"
+    "contextMenus",
+    "declarativeNetRequestWithHostAccess"
   ],
   "host_permissions": ["http://*/*", "https://*/*"],
   "background": {
@@ -33,7 +34,7 @@
   },
   "incognito": "not_allowed",
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none';"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none';"
   },
   "icons": {
     "16": "icons/app-16.png",
@@ -47,6 +48,12 @@
       "js": ["selection-content.js"],
       "all_frames": true,
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["pdf/viewer.html"],
+      "matches": ["http://*/*", "https://*/*"]
     }
   ]
 }

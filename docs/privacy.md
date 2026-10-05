@@ -17,15 +17,16 @@ limit which tabs tools can access; they do not validate the intentions of a page
 
 ## Permissions
 
-| Permission                          | Why it is needed                                                                     |
-| ----------------------------------- | ------------------------------------------------------------------------------------ |
-| HTTP(S) host access and `scripting` | Read the selected page and observe text selection.                                   |
-| `tabs` and `webNavigation`          | Associate conversations with tabs and preserve them across navigation.               |
-| `sidePanel`                         | Display the conversation alongside the page.                                         |
-| `storage`                           | Keep preferences, draft references, and tab/session state.                           |
-| `nativeMessaging`                   | Connect to the installed local Python host.                                          |
-| `debugger`                          | Perform trusted browser input and screenshots. Chrome may show an attachment notice. |
-| `contextMenus`                      | Quote selected text, including text in Chrome's native PDF viewer.                   |
+| Permission                            | Why it is needed                                                                      |
+| ------------------------------------- | ------------------------------------------------------------------------------------- |
+| HTTP(S) host access and `scripting`   | Read the selected page and observe text selection.                                    |
+| `tabs` and `webNavigation`            | Associate conversations with tabs and preserve them across navigation.                |
+| `sidePanel`                           | Display the conversation alongside the page.                                          |
+| `storage`                             | Keep preferences, draft references, and tab/session state.                            |
+| `nativeMessaging`                     | Connect to the installed local Python host.                                           |
+| `debugger`                            | Perform trusted browser input and screenshots. Chrome may show an attachment notice.  |
+| `declarativeNetRequestWithHostAccess` | Open online PDF documents in the bundled local viewer; allow native fallback per tab. |
+| `contextMenus`                        | Quote selected text, including text in Chrome's native PDF viewer.                    |
 
 Browser tools enforce current-window or all-windows scope on each operation.
 Incognito and internal browser pages are excluded from ordinary page automation.
@@ -56,3 +57,8 @@ reader only accepts files under the upload directory.
 
 See [SECURITY.md](../SECURITY.md). Do not include credentials, private page contents,
 or unredacted conversation logs in public issues.
+
+PDF.js renders documents locally in an extension page. PDF scripts and automatic
+alt-text model downloads are disabled. Opening a PDF alone does not send it to
+Codex; submitting a quote or asking Agent to read it supplies that context.
+Highlights and comments are saved only when you download the edited PDF.

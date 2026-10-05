@@ -124,3 +124,48 @@ assert.equal(clone.messages.at(-1).value.locator.kind, 'native-selection');
 await chrome.webNavigation.onCommitted.listeners[0]({ tabId: 1, frameId: 0 });
 assert.equal(clone.messages.at(-1).value, null);
 console.log('PASS PDF quotes and navigation clearing reach cloned conversations');
+
+// Real PDF port registration validates extension documents without webNavigation.
+const { startPdfRouting } = await import('../pdf-routing.js');
+chrome.declarativeNetRequest = {
+  updateDynamicRules: async () => {},
+  updateSessionRules: async () => {},
+};
+startPdfRouting();
+await call(message, source);
+const pdfURL = 'chrome-extension://test/pdf/viewer.html?url=https://example.test/paper.pdf';
+chrome.tabs.get = async (id) => ({
+  id,
+  windowId: 1,
+  url: id === 1 ? pdfURL : 'https://example.test/',
+});
+const pdfSender = {
+  id: 'test',
+  tab: { id: 1 },
+  frameId: 0,
+  documentId: 'pdf-document',
+  url: pdfURL,
+};
+function connectPdf(sender) {
+  const port = { name: 'pdf', sender, onMessage: event(), onDisconnect: event(), postMessage() {} };
+  for (const listener of chrome.runtime.onConnect.listeners) listener(port);
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+await connectPdf(pdfSender);
+assert.equal(one.messages.at(-1).value, null, 'Opening PDF clears the previous HTML quote');
+await call({ ...message, locator: { kind: 'pdf', page: 1 } }, pdfSender);
+assert.equal(one.messages.at(-1).value.url, 'https://example.test/paper.pdf');
+assert.equal(clone.messages.at(-1).value.locator.page, 1);
+await connectPdf(pdfSender);
+assert.equal(
+  one.messages.at(-1).value.text,
+  'quotation',
+  'Worker reconnect preserves current PDF selection',
+);
+assert((await call(message, { ...pdfSender, documentId: 'stale' })).error);
+assert((await call(message, { ...pdfSender, frameId: 1 })).error);
+await connectPdf({ ...pdfSender, documentId: 'new-pdf-document' });
+assert.equal(one.messages.at(-1).value, null);
+console.log(
+  'PASS PDF source identity, shared quotes, stale document rejection, navigation clearing and reconnect',
+);

@@ -1,7 +1,9 @@
+import { pdfSource, pdfTab, pdfCommand } from './pdf-routing.js';
 import { nativeInput } from './browser-input.js';
 const newTab = (tab) => /^chrome:\/\/(newtab|new-tab-page)\//.test(tab.url || '');
 const allowed = (tab) =>
-  !tab.incognito && (/^(https?:|about:blank)/.test(tab.url || '') || newTab(tab));
+  !tab.incognito &&
+  (/^(https?:|about:blank)/.test(tab.url || '') || newTab(tab) || !!pdfSource(tab.url));
 const busyTabs = new Set();
 export async function available(session) {
   const owner = await chrome.tabs.get(session.tabId);
@@ -15,8 +17,10 @@ export async function context(session) {
   const agentPage = tab.url?.startsWith(chrome.runtime.getURL('ui/chat.html'));
   return {
     scope: session.scope,
-    page: !tab.incognito && (allowed(tab) || agentPage) ? tab : null,
-    ...(allowed(tab) && !newTab(tab) ? { contentType: await contentType(tab.id) } : {}),
+    page: !tab.incognito && (allowed(tab) || agentPage) ? pdfTab(tab) : null,
+    ...(allowed(tab) && !newTab(tab)
+      ? { contentType: pdfSource(tab.url) ? 'application/pdf' : await contentType(tab.id) }
+      : {}),
   };
 }
 export async function browserTool(session, args, readPdf) {
@@ -47,7 +51,7 @@ async function operate(session, args, id, readPdf) {
   if (args.action === 'context') return context(session);
   const tabs = await available(session);
   if (args.action === 'tabs')
-    return tabs.map(({ id, windowId, title, url, active }) => ({
+    return tabs.map(pdfTab).map(({ id, windowId, title, url, active }) => ({
       id,
       windowId,
       title,
@@ -88,6 +92,14 @@ async function operate(session, args, id, readPdf) {
       throw Error(
         'Chrome internal pages cannot be inspected or clicked; navigate to a website first',
       );
+  }
+  if (
+    pdfSource(tabs.find((t) => t.id === id).url) &&
+    ['read', 'selectText', 'highlight', 'savePdf'].includes(args.action)
+  ) {
+    const result = await pdfCommand(id, args);
+    await check();
+    return result;
   }
   let result;
   if (args.action === 'navigate') result = await chrome.tabs.update(id, { url: url() });

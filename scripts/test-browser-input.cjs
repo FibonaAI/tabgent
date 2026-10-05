@@ -23,7 +23,7 @@ const root = process.cwd(),
       }),
     );
     fs.writeFileSync(ext + '/setup.html', '<!doctype html><title>Browser tool fixture</title>');
-    for (const file of ['browser-tools.js', 'browser-input.js'])
+    for (const file of ['browser-tools.js', 'browser-input.js', 'pdf-routing.js'])
       fs.copyFileSync(root + '/extension/' + file, ext + '/' + file);
     browser = await chromium.launchPersistentContext(temp + '/profile', {
       headless: true,
