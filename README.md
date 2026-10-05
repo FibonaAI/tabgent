@@ -47,6 +47,34 @@ Prewarming reduces startup work; it does not make model responses faster. No hea
 
 Requires **macOS, Python 3.9+, Chrome 142+, and Codex installed and signed in**.
 
+### Ask Codex to install it
+
+Copy this into your Codex chat:
+
+```text
+Install Browser Agent Connector for me from:
+https://github.com/FibonaAI/browser-agent-connector
+
+Check that this Mac has Python 3.9+, Chrome 142+, and a compatible Codex
+installation. Clone the repository into an unused local folder using my
+existing GitHub access, read its installation instructions, and run
+python3 extension/native/install.py from the repository root.
+
+Use my existing CODEX_HOME and Codex sign-in. Open chrome://extensions,
+enable Developer mode, load the installed extension from
+${CODEX_HOME:-$HOME/.codex}/plugins/browser-agent-connector/extension,
+and pin it. Use browser controls if available; otherwise guide me through
+only the remaining clicks. Keep my existing Chrome profile and tabs.
+
+Open the Agent sidebar and verify it connects to Codex. If repository
+access, dependencies, or sign-in are missing, help me resolve that step
+and continue. Tell me whether installation and connection are verified.
+```
+
+The repository is currently private; your GitHub account needs access. Chrome loading or Codex sign-in may require a few manual steps.
+
+### Install manually
+
 1. Download this repository and double-click **Install.command**.
 2. Open `chrome://extensions`, enable **Developer mode**, then **Load unpacked** → `~/.codex/plugins/browser-agent-connector/extension`.
 3. Pin the extension and click its icon. Start chatting beside any webpage.
