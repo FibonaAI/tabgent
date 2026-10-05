@@ -31,7 +31,7 @@ for (const file of [...walk('extension'), ...walk('scripts')]) {
 const messages = JSON.parse(fs.readFileSync('extension/_locales/en/messages.json', 'utf8'));
 for (const file of walk('extension').filter((f) => /\.(html|js)$/.test(f))) {
   const text = fs.readFileSync(file, 'utf8');
-  const keys = [...text.matchAll(/\$i18n\{([A-Za-z0-9_]+)\}|\bi18n\('([^']+)'/g)];
+  const keys = [...text.matchAll(/\$i18n\{([A-Za-z0-9_]+)\}|\b(?:i18n|t)\('([^']+)'(?=\s*[,\)])/g)];
   for (const match of keys)
     assert(messages[match[1] || match[2]], `Missing English string in ${file}: ${match[0]}`);
 }

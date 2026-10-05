@@ -414,5 +414,200 @@
   },
   "pdfDirty": {
     "message": "This PDF has unsaved changes. Download a copy before leaving."
+  },
+  "commands": {
+    "message": "Commands"
+  },
+  "skills": {
+    "message": "Skills"
+  },
+  "goal": {
+    "message": "Goal"
+  },
+  "loading": {
+    "message": "Loading\u2026"
+  },
+  "noCommands": {
+    "message": "No matches"
+  },
+  "commandKeys": {
+    "message": "\u2191 \u2193 navigate \u00b7 Enter select \u00b7 Esc dismiss"
+  },
+  "unavailableRunning": {
+    "message": "Available after the current turn finishes"
+  },
+  "manageSkills": {
+    "message": "Enable/Disable Skills"
+  },
+  "manageSkillsHint": {
+    "message": "Manage which skills Codex can use"
+  },
+  "selected": {
+    "message": "Selected"
+  },
+  "save": {
+    "message": "Save"
+  },
+  "refresh": {
+    "message": "Refresh"
+  },
+  "pause": {
+    "message": "Pause"
+  },
+  "resume": {
+    "message": "Resume"
+  },
+  "edit": {
+    "message": "Edit"
+  },
+  "clear": {
+    "message": "Clear"
+  },
+  "objective": {
+    "message": "Objective"
+  },
+  "tokenBudgetOptional": {
+    "message": "Token budget (optional)"
+  },
+  "tokensUsed": {
+    "message": "Tokens used"
+  },
+  "timeUsed": {
+    "message": "Time used"
+  },
+  "thread": {
+    "message": "Thread"
+  },
+  "contextWindow": {
+    "message": "Context window"
+  },
+  "unavailable": {
+    "message": "Unavailable"
+  },
+  "contextLeft": {
+    "message": "context left"
+  },
+  "tokens": {
+    "message": "tokens"
+  },
+  "unknownCommand": {
+    "message": "Unknown command. Type / to choose a command or skill."
+  },
+  "browserPermissions": {
+    "message": "Browser actions use the selected scope. This connector keeps filesystem access read-only and disables shell execution; these permissions cannot be widened from this menu."
+  },
+  "planMode": {
+    "message": "Plan mode"
+  },
+  "goalActive": {
+    "message": "Active"
+  },
+  "goalPaused": {
+    "message": "Paused"
+  },
+  "goalBlocked": {
+    "message": "Blocked"
+  },
+  "goalUsageLimited": {
+    "message": "Usage limit reached"
+  },
+  "goalBudgetLimited": {
+    "message": "Token budget reached"
+  },
+  "goalComplete": {
+    "message": "Complete"
+  },
+  "cmdSkills": {
+    "message": "Browse and use your installed skills"
+  },
+  "cmdGoal": {
+    "message": "Set or view a persistent task goal"
+  },
+  "cmdModel": {
+    "message": "Choose the model and reasoning effort"
+  },
+  "cmdPlan": {
+    "message": "Switch between Plan mode and normal conversation"
+  },
+  "cmdNew": {
+    "message": "Start a new conversation with the same page context"
+  },
+  "cmdRename": {
+    "message": "Rename this conversation"
+  },
+  "cmdCompact": {
+    "message": "Compact conversation context"
+  },
+  "cmdStatus": {
+    "message": "Session configuration and token usage"
+  },
+  "cmdPermissions": {
+    "message": "View the current permissions"
+  },
+  "cmdCopy": {
+    "message": "Copy the last response"
+  },
+  "cmdExport": {
+    "message": "Export this conversation as Markdown"
+  },
+  "workedFor": {
+    "message": "Worked for $1s"
+  },
+  "activity": {
+    "message": "Activity"
+  },
+  "exitCode": {
+    "message": "Exit code"
+  },
+  "duration": {
+    "message": "Duration"
+  },
+  "agents": {
+    "message": "Agents"
+  },
+  "details": {
+    "message": "Details"
+  },
+  "fileChanges": {
+    "message": "File changes"
+  },
+  "compacting": {
+    "message": "Compacting context"
+  },
+  "imageGeneration": {
+    "message": "Generating image"
+  },
+  "waiting": {
+    "message": "Waiting"
+  },
+  "actionSelectText": {
+    "message": "Select PDF text"
+  },
+  "actionHighlight": {
+    "message": "Highlight PDF text"
+  },
+  "actionSavePdf": {
+    "message": "Save annotated PDF"
+  },
+  "updatedPlan": {
+    "message": "Updated plan"
+  },
+  "allowOnce": {
+    "message": "Allow once"
+  },
+  "allowSession": {
+    "message": "Allow for this session"
+  },
+  "cancel": {
+    "message": "Cancel"
+  },
+  "approvalReason": {
+    "message": "Reason"
+  },
+  "approvalDetails": {
+    "message": "Requested action"
+  },
+  "requestInputRequired": {
+    "message": "Answer each question before continuing."
   }
 }

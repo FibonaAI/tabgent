@@ -318,6 +318,7 @@ chrome.runtime.onConnect.addListener((port) => {
         s.settings = {
           model: String(arg.model || '').slice(0, 200),
           effort: String(arg.effort || '').slice(0, 30),
+          mode: arg.mode === 'plan' ? 'plan' : 'default',
         };
         await persist();
         for (const p of s.ports) if (p !== port) event(p, 'codex-settings', arg);
@@ -438,6 +439,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
         settings: {
           model: String(msg.settings?.model || '').slice(0, 200),
           effort: String(msg.settings?.effort || '').slice(0, 30),
+          mode: msg.settings?.mode === 'plan' ? 'plan' : 'default',
         },
         draft: '',
         ports: new Set(),

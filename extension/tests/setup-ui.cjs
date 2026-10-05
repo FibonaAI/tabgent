@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, '..');
 const bridge = `
 const listeners=new Map();
 const mode=new URL(location.href).searchParams.get('mode');
-if(!sessionStorage.started){sessionStorage.started='1';sessionStorage.installed=String(mode!=='install');sessionStorage.helper=String(mode!=='helper');sessionStorage.auth=String(mode==='selection');sessionStorage.draft='keep my draft';}
+if(!sessionStorage.started){sessionStorage.started='1';sessionStorage.installed=String(mode!=='install');sessionStorage.helper=String(mode!=='helper');sessionStorage.auth=String(['selection','transcript'].includes(mode));sessionStorage.draft='keep my draft';}
 let authenticated=sessionStorage.auth==='true';
 const emit=(method,params={})=>listeners.get('codex-message')?.({method,params});
 export const bridge={threadId:null,send(name,args=[]){
@@ -17,10 +17,13 @@ export const bridge={threadId:null,send(name,args=[]){
  if(name==='codexCheckAuth'&&sessionStorage.auth==='true'&&!authenticated)emit('bridge/authChanged');
  if(name==='codexOpenSetupUrl'||name==='helperHelp')window.setupTest.actions.push({name,args});
  if(name==='codexRpc'){
- const m=args[0];if(m.id===undefined)return;
+ const m=args[0];if(m.id===undefined)return;window.setupTest.requests.push(m);
  if(m.method==='turn/start'){window.setupTest.params=m.params;window.setupTest.input=m.params.input;if(window.setupTest.failSend){setTimeout(()=>emit('unused'),0);setTimeout(()=>listeners.get('codex-message')?.({id:m.id,error:{message:'Test send failure'}}),0);return;}}
  if(m.method==='account/login/start'&&mode==='timeout'&&!sessionStorage.retry)return;
  let result={};
+ if(m.method==='skills/list')result={data:[{cwd:'/project',errors:[],skills:[{name:'review',path:'/skills/review/SKILL.md',description:'Review a change',enabled:true}]}]};
+ if(m.method==='thread/goal/get')result={goal:null};
+ if(m.method==='thread/goal/set')result={goal:{objective:m.params.objective||'Test goal',status:m.params.status||'active',tokensUsed:0,timeUsedSeconds:0}};
  if(m.method==='turn/start')result={turn:{id:'test-turn'}};
  if(m.method==='account/read')result={account:authenticated?{type:'chatgpt'}:null,requiresOpenaiAuth:true};
  if(m.method==='account/login/start')result={loginId:'test-login',authUrl:'https://auth.openai.com/test-only'};
@@ -30,7 +33,7 @@ export const bridge={threadId:null,send(name,args=[]){
  setTimeout(()=>listeners.get('codex-message')?.({id:m.id,result}),0);
  }
 }};
-window.setupTest={actions:[],context(value){listeners.get('codex-context')?.(value);},select(value){listeners.get('codex-selection')?.(value);},install(){sessionStorage.installed='true';sessionStorage.helper='true';},externalLogin(){sessionStorage.auth='true';},complete(){authenticated=true;sessionStorage.auth='true';emit('account/login/completed',{success:true,loginId:'test-login'});},fail(){emit('account/login/completed',{success:false,loginId:'test-login'});}};
+window.setupTest={emit,requests:[],actions:[],context(value){listeners.get('codex-context')?.(value);},select(value){listeners.get('codex-selection')?.(value);},install(){sessionStorage.installed='true';sessionStorage.helper='true';},externalLogin(){sessionStorage.auth='true';},complete(){authenticated=true;sessionStorage.auth='true';emit('account/login/completed',{success:true,loginId:'test-login'});},fail(){emit('account/login/completed',{success:false,loginId:'test-login'});}};
 export async function newConversation(){}
 export async function openAgentTab(){window.setupTest.actions.push({name:'openAgent'})}
 export async function startBridge(){if(mode==='attach-failure')throw Error('Missing tab');}
@@ -78,6 +81,7 @@ export function saveScopePreference(){}
   const messages = JSON.parse(fs.readFileSync(root + '/_locales/en/messages.json'));
   try {
     for (const mode of [
+      'transcript',
       'attach-failure',
       'selection',
       'native-failure',
@@ -93,7 +97,13 @@ export function saveScopePreference(){}
       await context.addInitScript((messages) => {
         window.chrome = {
           i18n: {
-            getMessage: (key) => (key === '@@bidi_dir' ? 'ltr' : messages[key]?.message || key),
+            getMessage: (key, substitutions = []) =>
+              key === '@@bidi_dir'
+                ? 'ltr'
+                : (messages[key]?.message || key).replace(
+                    /\$(\d+)/g,
+                    (_, n) => substitutions[Number(n) - 1] ?? '',
+                  ),
             getUILanguage: () => 'en',
           },
         };
@@ -102,6 +112,119 @@ export function saveScopePreference(){}
       const errors = [];
       page.on('pageerror', (e) => errors.push(e.message));
       await page.goto('http://127.0.0.1:' + server.address().port + '/ui/chat.html?mode=' + mode);
+      if (mode === 'transcript') {
+        await page.waitForFunction(
+          () => document.querySelector('#connection').dataset.state === 'ready',
+        );
+        await page.locator('#prompt').fill('/');
+        await page
+          .locator('#commandMenu')
+          .getByRole('option')
+          .filter({ hasText: '/skills' })
+          .click();
+        await page.keyboard.press('ArrowDown');
+        await page
+          .locator('#commandMenu')
+          .getByRole('option')
+          .filter({ hasText: 'review' })
+          .click();
+        assert.equal(await page.locator('#prompt').inputValue(), '$review ');
+        await page.locator('#prompt').fill('$review Check this page');
+        await page.keyboard.press('Enter');
+        await page.waitForFunction(() => setupTest.input?.some((x) => x.type === 'skill'));
+        assert.deepEqual(
+          await page.evaluate(() => setupTest.input.find((x) => x.type === 'skill')),
+          { type: 'skill', name: 'review', path: '/skills/review/SKILL.md' },
+        );
+        await page.evaluate(() => {
+          const emit = (method, params) =>
+            setupTest.emit(method, { threadId: 'test-thread', turnId: 'test-turn', ...params });
+          emit('turn/started', { turn: { id: 'test-turn' } });
+          emit('item/started', { item: { id: 'r', type: 'reasoning', summary: [] } });
+          emit('item/reasoning/summaryTextDelta', {
+            itemId: 'r',
+            summaryIndex: 0,
+            delta: '**Checking the page**\nLooking for evidence.',
+          });
+          emit('item/completed', { item: { id: 'r', type: 'reasoning', summary: [] } });
+          emit('turn/plan/updated', {
+            plan: [
+              { step: 'Read page', status: 'completed' },
+              { step: 'Compare evidence', status: 'inProgress' },
+            ],
+          });
+          emit('item/started', {
+            item: {
+              id: 'tool',
+              type: 'mcpToolCall',
+              server: 'browser',
+              tool: 'read',
+              arguments: { tabId: 1 },
+            },
+          });
+          emit('item/mcpToolCall/progress', { itemId: 'tool', message: 'Reading visible text' });
+          emit('item/completed', {
+            item: {
+              id: 'tool',
+              type: 'mcpToolCall',
+              server: 'browser',
+              tool: 'read',
+              arguments: { tabId: 1 },
+              status: 'completed',
+              result: { content: [{ type: 'text', text: 'Evidence from page' }] },
+            },
+          });
+        });
+        assert(await page.locator('.worklog').isVisible());
+        assert((await page.locator('.worklog').innerText()).includes('Checking the page'));
+        await page.locator('#prompt').fill('Focus on the introduction');
+        await page.keyboard.press('Enter');
+        await page.waitForFunction(() => setupTest.requests.some((r) => r.method === 'turn/steer'));
+        await page.evaluate(() => {
+          setupTest.emit('item/completed', {
+            threadId: 'test-thread',
+            item: {
+              id: 'a',
+              type: 'agentMessage',
+              phase: 'final_answer',
+              text: '## Findings\n\n- First finding\n- Second finding\n\n| Page | Result |\n| --- | --- |\n| Intro | Verified |\n\n<script>alert(1)</script><img src="https://example.test/tracker">',
+            },
+          });
+          setupTest.emit('thread/tokenUsage/updated', {
+            threadId: 'test-thread',
+            tokenUsage: {
+              last: { totalTokens: 100 },
+              total: { totalTokens: 200 },
+              modelContextWindow: 1000,
+            },
+          });
+          setupTest.emit('turn/completed', {
+            threadId: 'test-thread',
+            turn: { id: 'test-turn', status: 'completed' },
+          });
+        });
+        await page.waitForFunction(() => !document.body.classList.contains('busy'));
+        assert.equal(await page.locator('.worklog').getAttribute('open'), null);
+        await page.locator('.message.agent table').waitFor();
+        assert.equal(await page.locator('.message.agent table').count(), 1);
+        assert.equal(await page.locator('.message.agent script, .message.agent img').count(), 0);
+        assert((await page.locator('#contextUsage').innerText()).startsWith('90%'));
+        await page.locator('.worklog > summary').click();
+        await page.locator('#prompt').fill('/goal Test goal');
+        await page.keyboard.press('Enter');
+        await page.waitForFunction(() => !document.querySelector('#goal').hidden);
+        assert((await page.locator('#goal').innerText()).includes('Test goal'));
+        await page.setViewportSize({ width: 440, height: 850 });
+        await page.screenshot({ path: '/tmp/bac-transcript-narrow.png' });
+        await page.locator('#prompt').fill('/');
+        await page.screenshot({ path: '/tmp/bac-commands-narrow.png' });
+        assert.equal(errors.length, 0, errors.join('\n'));
+        await context.close();
+        console.log(
+          'PASS transcript, Markdown safety, skill input, steering, goal, command keyboard and compact work log',
+        );
+        continue;
+      }
       if (mode === 'attach-failure') {
         await page.waitForFunction(
           () => document.querySelector('#connection').dataset.state === 'failed',
@@ -229,7 +352,13 @@ export function saveScopePreference(){}
         await page.locator('#send').click();
         await page.waitForFunction(() => document.querySelector('#selection').hidden);
         const input = await page.evaluate(() => setupTest.input);
-        assert.equal(input[0].text, 'Explain this');
+        assert.equal(input[1].text, 'Explain this');
+        const bubble = page.locator('.message.user').last();
+        assert.equal(await bubble.locator('blockquote > div').textContent(), quote.text);
+        assert.equal(await bubble.locator('blockquote b').count(), 0);
+        assert.equal(await bubble.locator('blockquote a').getAttribute('href'), quote.url);
+        assert.equal(await bubble.evaluate((el) => el.firstElementChild.tagName), 'BLOCKQUOTE');
+        assert.equal(await bubble.evaluate((el) => el.children[1].textContent), 'Explain this');
         assert(input.find((x) => x.type === 'text' && x.text.includes(quote.text)));
         assert(input.some((x) => x.type === 'localImage' && x.path === '/uploads/test.png'));
         assert.equal(

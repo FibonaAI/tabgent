@@ -128,7 +128,7 @@ await native.onMessage.emit({
 assert.equal(sidebar.messages.at(-1).value.params.delta, 'Hello');
 assert.equal(full.messages.at(-1).value.params.delta, 'Hello');
 await sidebar.send({ type: 'ui', name: 'codexScope', args: ['browser'] });
-const copiedSettings = { model: 'test-model', effort: 'high' };
+const copiedSettings = { model: 'test-model', effort: 'high', mode: 'plan' };
 const fresh = await call({
   type: 'newConversation',
   conversationKey: 1,

@@ -1,3 +1,6 @@
+import { createCommands } from './commands.js';
+import { marked } from '../vendor/marked/marked.js';
+import DOMPurify from '../vendor/dompurify/purify.js';
 import {
   bridge,
   openAgentTab,
@@ -32,13 +35,15 @@ let turnId = null,
   busy = false,
   ready = false,
   context = {},
-  models = [];
+  models = [],
+  threadCwd = null;
 const pending = new Map(),
   items = new Map();
 let optimisticUser = null,
   turnStatus = null,
   turnStartedAt = 0,
-  activeReply = null;
+  activeReply = null,
+  worklog = null;
 let selectedPageText = null;
 let attachments = [],
   attaching = 0;
@@ -113,6 +118,28 @@ function rpc(method, params = {}) {
 function respond(id, result) {
   bridge.send('codexRpc', [{ id, result }]);
 }
+function activityLog() {
+  if (!worklog) {
+    worklog = node('details', null, $('messages'));
+    worklog.className = 'worklog';
+    worklog.open = true;
+    const summary = node('summary', i18n('working'), worklog);
+    const log = worklog;
+    summary.onclick = () => {
+      log.dataset.touched = 'true';
+    };
+    const body = node('div', null, worklog);
+    body.className = 'worklog-items';
+  }
+  return worklog.querySelector('.worklog-items');
+}
+function finishWorklog(seconds) {
+  if (!worklog) return;
+  worklog.querySelector('summary').textContent = seconds
+    ? i18n('workedFor', String(seconds))
+    : i18n('activity');
+  if (!worklog.dataset.touched) worklog.open = false;
+}
 function updateTurnStatus(text) {
   if (!busy || !turnStatus) return;
   if (turnStatus.textContent !== text) turnStatus.textContent = text;
@@ -121,6 +148,7 @@ function updateTurnStatus(text) {
 function setBusy(value, outcome = 'completed') {
   if (value && !busy) {
     activeReply = null;
+    worklog = null;
     turnStartedAt = performance.now();
     turnStatus = node('div', i18n('working'), $('messages'));
     turnStatus.className = 'message turn-status';
@@ -129,17 +157,19 @@ function setBusy(value, outcome = 'completed') {
   } else if (!value && busy && turnStatus) {
     const follow = nearBottom();
     turnStatus.replaceChildren();
-    node(
-      'span',
-      i18n(
-        'statusDuration',
-        i18n(outcome),
-        new Intl.NumberFormat(document.documentElement.lang).format(
-          Math.max(1, Math.round((performance.now() - turnStartedAt) / 1000)),
+    finishWorklog(Math.max(1, Math.round((performance.now() - turnStartedAt) / 1000)));
+    if (!worklog || outcome !== 'completed')
+      node(
+        'span',
+        i18n(
+          'statusDuration',
+          i18n(outcome),
+          new Intl.NumberFormat(document.documentElement.lang).format(
+            Math.max(1, Math.round((performance.now() - turnStartedAt) / 1000)),
+          ),
         ),
-      ),
-      turnStatus,
-    );
+        turnStatus,
+      );
     turnStatus.dataset.status =
       outcome === 'failed' || outcome === 'disconnected' ? 'failed' : 'completed';
     if (activeReply?.text.trim() && activeReply.phase !== 'commentary') {
@@ -169,94 +199,84 @@ function node(tag, text, parent) {
   parent?.append(e);
   return e;
 }
-// Build Markdown with DOM nodes only. Neither model output nor page text
-// becomes HTML.
-function inline(parent, text) {
-  const re = /(`[^`]+`|\*\*[^*]+\*\*|\[[^\]]+\]\(https?:\/\/[^\s)]+\))/g;
-  let p = 0;
-  for (const m of text.matchAll(re)) {
-    parent.append(document.createTextNode(text.slice(p, m.index)));
-    const t = m[0];
-    if (t[0] === '`') node('code', t.slice(1, -1), parent);
-    else if (t.startsWith('**')) node('strong', t.slice(2, -2), parent);
-    else {
-      const cut = t.indexOf('](');
-      const a = node('a', t.slice(1, cut), parent);
-      a.href = t.slice(cut + 2, -1);
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-    }
-    p = m.index + t.length;
-  }
-  parent.append(document.createTextNode(text.slice(p)));
-}
+// CommonMark/GFM parsing with sanitized DOM; never execute model-supplied HTML.
 function markdown(target, text) {
-  const fragment = document.createDocumentFragment();
-  const lines = text.split('\n');
-  let paragraph = [];
-  const flush = () => {
-    if (paragraph.length) {
-      inline(node('p', null, fragment), paragraph.join('\n'));
-      paragraph = [];
-    }
-  };
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (/^```/.test(line)) {
-      flush();
-      const language = line.slice(3).trim();
-      const codeLines = [];
-      while (++i < lines.length && !/^```/.test(lines[i])) codeLines.push(lines[i]);
-      const block = node('div', null, fragment);
-      block.className = 'code-block';
-      const heading = node('div', null, block);
-      heading.className = 'code-heading';
-      node('span', language || i18n('code'), heading);
-      const copy = node('button', i18n('copy'), heading);
-      copy.onclick = () => copyText(copy, codeLines.join('\n'));
-      node('code', codeLines.join('\n'), node('pre', null, block));
-    } else if (/^#{1,6} /.test(line)) {
-      flush();
-      inline(node('h3', null, fragment), line.replace(/^#+ /, ''));
-    } else if (/^\s*(?:[-*+] |\d+[.)] )/.test(line)) {
-      flush();
-      const ordered = /^\s*\d/.test(line);
-      const list = node(ordered ? 'ol' : 'ul', null, fragment);
-      if (ordered) list.start = parseInt(line, 10);
-      do {
-        inline(node('li', null, list), lines[i].replace(/^\s*(?:[-*+] |\d+[.)] )/, ''));
-        i++;
-      } while (i < lines.length && (ordered ? /^\s*\d+[.)] / : /^\s*[-*+] /).test(lines[i]));
-      i--;
-    } else if (/^> ?/.test(line)) {
-      flush();
-      inline(node('blockquote', null, fragment), line.replace(/^> ?/, ''));
-    } else if (line.includes('|') && /^\s*\|?\s*:?-{3,}/.test(lines[i + 1] || '')) {
-      flush();
-      const wrap = node('div', null, fragment);
-      wrap.className = 'table-wrap';
-      const table = node('table', null, wrap);
-      const cells = (value) =>
-        value
-          .trim()
-          .replace(/^\||\|$/g, '')
-          .split('|')
-          .map((v) => v.trim());
-      const row = node('tr', null, node('thead', null, table));
-      for (const cell of cells(line)) inline(node('th', null, row), cell);
-      const body = node('tbody', null, table);
-      i += 2;
-      while (i < lines.length && lines[i].includes('|') && lines[i].trim()) {
-        const row = node('tr', null, body);
-        for (const cell of cells(lines[i++])) inline(node('td', null, row), cell);
-      }
-      i--;
-    } else if (!line.trim()) flush();
-    else paragraph.push(line);
+  const fragment = DOMPurify.sanitize(marked.parse(text, { gfm: true }), {
+    RETURN_DOM_FRAGMENT: true,
+    FORBID_TAGS: ['img', 'style', 'input', 'button', 'form', 'iframe', 'svg', 'video', 'audio'],
+    FORBID_ATTR: ['style', 'id', 'name'],
+  });
+  for (const a of fragment.querySelectorAll('a')) {
+    if (!/^https?:|^mailto:/.test(a.getAttribute('href') || '')) a.removeAttribute('href');
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
   }
-  flush();
+  for (const pre of [...fragment.querySelectorAll('pre')]) {
+    const code = pre.querySelector('code');
+    const block = document.createElement('div');
+    block.className = 'code-block';
+    pre.before(block);
+    const heading = node('div', null, block);
+    heading.className = 'code-heading';
+    node('span', code?.className.replace('language-', '') || i18n('code'), heading);
+    const copy = node('button', i18n('copy'), heading);
+    copy.onclick = () => copyText(copy, code?.textContent || pre.textContent);
+    block.append(pre);
+  }
+  for (const table of [...fragment.querySelectorAll('table')]) {
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+    table.before(wrap);
+    wrap.append(table);
+  }
   target.replaceChildren(fragment);
 }
+const commands = createCommands({
+  rpc,
+  error: showError,
+  draftChanged: () => {
+    saveDraft();
+    resizePrompt();
+  },
+  state: () => ({
+    ready,
+    busy,
+    threadId,
+    cwd: threadCwd,
+    title: $('title').value,
+    model: $('model').value,
+    effort: $('effort').value,
+    scope: $('scope').selectedOptions[0]?.textContent,
+  }),
+  modeChanged: (mode) => {
+    bridge.settings = { ...bridge.settings, mode };
+    shareSettings();
+  },
+  newChat: () =>
+    newConversation({ ...bridge.settings, model: $('model').value, effort: $('effort').value }),
+  copyReply: () =>
+    navigator.clipboard.writeText(
+      [...items.values()].reverse().find((r) => r.type === 'agentMessage')?.text || '',
+    ),
+  exportChat: () => {
+    const text = [...items.values()]
+      .map((r) =>
+        r.type === 'agentMessage'
+          ? r.text
+          : r.type === 'userMessage'
+            ? '## User\n\n' + r.el.textContent
+            : '',
+      )
+      .filter(Boolean)
+      .join('\n\n');
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/markdown' }));
+    const a = node('a', null);
+    a.href = url;
+    a.download = ($('title').value || 'conversation') + '.md';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  },
+});
 function toolDetails(record, item, completed) {
   const names = {
     context: i18n('actionContext'),
@@ -279,6 +299,9 @@ function toolDetails(record, item, completed) {
     check: i18n('actionCheck'),
     focus: i18n('actionFocus'),
     close: i18n('actionClose'),
+    selectText: i18n('actionSelectText'),
+    highlight: i18n('actionHighlight'),
+    savePdf: i18n('actionSavePdf'),
   };
   const failed = item.success === false || item.status === 'failed' || !!item.error;
   const label =
@@ -292,17 +315,27 @@ function toolDetails(record, item, completed) {
           ? i18n('command')
           : item.type === 'webSearch'
             ? i18n('webSearch')
-            : item.type;
-  const action = names[item.arguments?.action];
+            : {
+                fileChange: i18n('fileChanges'),
+                contextCompaction: i18n('compacting'),
+                collabAgentToolCall: i18n('agents'),
+                imageGeneration: i18n('imageGeneration'),
+                sleep: i18n('waiting'),
+                imageView: i18n('imagePreview'),
+              }[item.type] || item.type;
+  let argumentsValue = item.arguments;
+  if (typeof argumentsValue === 'string') {
+    try {
+      argumentsValue = JSON.parse(argumentsValue);
+    } catch {}
+  }
+  const action = names[argumentsValue?.action];
   record.label.textContent = action ? label + ' · ' + action : label;
-  record.preview.textContent = item.arguments?.url || item.action?.query || item.query || '';
-  record.state.textContent = failed
-    ? i18n('failed')
-    : completed
-      ? i18n('completed')
-      : i18n('running');
+  record.preview.textContent =
+    argumentsValue?.url || item.action?.query || item.query || item.command || '';
+  record.state.textContent = failed ? i18n('failed') : completed ? '' : i18n('running');
   if (completed && item.durationMs != null)
-    record.state.textContent = i18n(
+    record.summary.title = i18n(
       'statusDuration',
       record.state.textContent,
       new Intl.NumberFormat(document.documentElement.lang, {
@@ -311,7 +344,9 @@ function toolDetails(record, item, completed) {
       }).format(item.durationMs / 1000),
     );
   record.el.dataset.status = failed ? 'failed' : completed ? 'completed' : 'running';
+  const streamedOutput = record.output?.textContent;
   record.detail.replaceChildren();
+  record.output = null;
   const pretty = (value) => {
     if (typeof value !== 'string') return JSON.stringify(value, null, 2);
     try {
@@ -340,9 +375,23 @@ function toolDetails(record, item, completed) {
       image.alt = i18n('screenshotAlt');
       image.src = imageUrl;
       image.loading = 'lazy';
+      enableImagePreview(image);
     }
   }
-  if (!outputs.length) section(i18n('result'), item.aggregatedOutput ?? item.result);
+  if (!outputs.length)
+    section(i18n('result'), item.aggregatedOutput ?? item.result ?? streamedOutput);
+  if (item.exitCode != null) section(i18n('exitCode'), item.exitCode);
+  if (item.durationMs != null) section(i18n('duration'), (item.durationMs / 1000).toFixed(1) + 's');
+  for (const change of item.changes || []) section(change.path, change.diff || change.kind);
+  if (item.agentsStates) section(i18n('agents'), item.agentsStates);
+  if (item.results) section(i18n('result'), item.results);
+  if (
+    !['dynamicToolCall', 'mcpToolCall', 'commandExecution', 'webSearch', 'fileChange'].includes(
+      item.type,
+    )
+  )
+    section(i18n('details'), item);
+  if (record.progress?.length) section(i18n('status'), record.progress.join('\n'));
   section(i18n('error'), item.error?.message || item.error);
   if (failed && !item.error && !outputs.length) section(i18n('result'), i18n('toolFailed'));
   if (!completed && !outputs.length) section(i18n('status'), i18n('waitingTool'));
@@ -358,7 +407,11 @@ function renderItem(item, completed = true) {
   if (!record) {
     const follow = nearBottom();
     const activity = !['userMessage', 'agentMessage', 'plan'].includes(item.type);
-    const el = node(activity ? 'details' : 'article', null, $('messages'));
+    const el = node(
+      activity ? 'details' : 'article',
+      null,
+      activity || item.phase === 'commentary' ? activityLog() : $('messages'),
+    );
     record = { el, text: '', type: item.type };
     items.set(item.id, record);
     if (activity) {
@@ -401,7 +454,7 @@ function renderItem(item, completed = true) {
     el.className = 'message user';
     renderUserInput(el, item.content || []);
   } else if (item.type === 'agentMessage' || item.type === 'plan') {
-    record.text = item.text || '';
+    record.text = item.text ?? record.text;
     record.phase = item.phase ?? record.phase;
     record.actions.hidden = !completed || busy || record.phase === 'commentary';
     record.el.hidden = !record.text.trim();
@@ -411,9 +464,14 @@ function renderItem(item, completed = true) {
     record.label.textContent = completed ? i18n('reasoning') : i18n('thinkingLabel');
     record.state.textContent = completed ? '' : i18n('inProgress');
     record.el.dataset.status = completed ? 'completed' : 'running';
-    record.text = (item.summary || []).join('\n');
+    record.text =
+      (item.summary || []).map((x) => (typeof x === 'string' ? x : x.text || '')).join('\n') ||
+      record.text;
+    record.el.hidden = completed && !record.text.trim();
     record.detail.replaceChildren();
-    node('pre', record.text || i18n('analyzing'), record.detail);
+    markdown(record.detail, record.text);
+    const heading = /^\*\*(.+?)\*\*/.exec(record.text);
+    if (heading) record.label.textContent = heading[1];
   } else {
     toolDetails(record, item, completed);
   }
@@ -597,12 +655,14 @@ async function completeSetup() {
       bindThread(threadId);
     }
     const thread = response.thread;
+    threadCwd = thread.cwd;
     title(thread.name || thread.preview?.slice(0, 48) || i18n('newChat'));
     if (!bridge.settings?.model && thread.model && models.some((m) => m.model === thread.model)) {
       $('model').value = thread.model;
       efforts();
     }
     for (const turn of thread.turns || []) {
+      worklog = null;
       for (const item of turn.items || []) renderItem(item);
       if (turn.status !== 'inProgress' && turn.items?.length) {
         const outcome =
@@ -614,7 +674,12 @@ async function completeSetup() {
         const footer = node('div', null, $('messages'));
         footer.className = 'message turn-status';
         footer.dataset.status = outcome;
-        node('span', i18n(outcome), footer);
+        finishWorklog(
+          turn.completedAt && turn.startedAt
+            ? Math.max(1, turn.completedAt - turn.startedAt)
+            : null,
+        );
+        if (!worklog || outcome !== 'completed') node('span', i18n(outcome), footer);
         const final = [...turn.items]
           .reverse()
           .find((item) => item.type === 'agentMessage' && item.phase !== 'commentary');
@@ -627,6 +692,8 @@ async function completeSetup() {
       setBusy(true);
     }
     ready = true;
+    commands.setMode(bridge.settings?.mode);
+    void commands.initialize();
     renderAttachments();
     setupMode = '';
     loginAttempt = null;
@@ -655,10 +722,21 @@ async function completeSetup() {
 }
 async function send() {
   const text = $('prompt').value.trim();
-  if ((!text && !attachments.length) || attaching || busy || !ready) return;
+  if (ready && text.startsWith('/')) {
+    try {
+      if (await commands.submit(text)) return;
+    } catch (e) {
+      showError(e.message);
+      return;
+    }
+  }
+  if ((!text && !attachments.length) || attaching || !ready) return;
+  const steering = busy;
+  if (steering && !turnId) return;
   const selection = selectedPageText;
   const submittedAttachments = [...attachments];
   const input = text ? [{ type: 'text', text, text_elements: [] }] : [];
+  input.push(...commands.input());
   input.push(
     ...submittedAttachments.map((a) =>
       a.image
@@ -667,7 +745,7 @@ async function send() {
     ),
   );
   if (selection)
-    input.push({
+    input.unshift({
       type: 'text',
       text:
         i18n('selectionQuote') +
@@ -689,7 +767,7 @@ async function send() {
   $('prompt').value = '';
   saveDraft();
   resizePrompt();
-  setBusy(true);
+  if (!steering) setBusy(true);
   requestAnimationFrame(scrollEnd);
   try {
     if ($('title').value === i18n('newChat')) {
@@ -697,16 +775,22 @@ async function send() {
       title(name);
       rpc('thread/name/set', { threadId, name }).catch(() => {});
     }
-    const result = await rpc('turn/start', {
+    const result = await rpc(steering ? 'turn/steer' : 'turn/start', {
       threadId,
-      model: $('model').value || undefined,
-      effort: $('effort').value || undefined,
+      ...(steering
+        ? { expectedTurnId: turnId }
+        : {
+            model: $('model').value || undefined,
+            effort: $('effort').value || undefined,
+            collaborationMode: commands.collaborationMode(),
+          }),
       input,
       additionalContext: selection
         ? { pageSelection: { kind: 'untrusted', value: JSON.stringify(selection) } }
         : undefined,
     });
-    turnId = result.turn.id;
+    if (!steering) turnId = result.turn.id;
+    commands.sent();
     attachments = attachments.filter((a) => !submittedAttachments.includes(a));
     renderAttachments();
     if (selection && selectedPageText?.id === selection.id) {
@@ -722,7 +806,7 @@ async function send() {
       saveDraft();
       resizePrompt();
     }
-    setBusy(false, 'failed');
+    if (!steering) setBusy(false, 'failed');
     showError(e.message);
   }
 }
@@ -743,7 +827,9 @@ function question(message) {
       const input = node('input', null, card);
       input.placeholder = i18n('answerPlaceholder');
       for (const o of q.options || []) {
-        const b = node('button', o.label, card);
+        const b = node('button', null, card);
+        node('strong', o.label, b);
+        if (o.description) node('small', o.description, b);
         b.onclick = () => {
           input.value = o.label;
           for (const option of card.querySelectorAll('button')) option.classList.remove('selected');
@@ -754,6 +840,10 @@ function question(message) {
     }
     const submit = node('button', i18n('submitAnswer'), card);
     submit.onclick = () => {
+      if (fields.some(([, input]) => !input.value.trim())) {
+        showError(i18n('requestInputRequired'));
+        return;
+      }
       respond(message.id, {
         answers: Object.fromEntries(fields.map(([id, e]) => [id, { answers: [e.value] }])),
       });
@@ -762,6 +852,30 @@ function question(message) {
     };
   } else {
     node('p', i18n('permissionRequest'), card);
+    if (p.reason) node('p', p.reason, card);
+    const detail = p.command || p.permissions || p.changes || p.description;
+    if (detail)
+      node('pre', typeof detail === 'string' ? detail : JSON.stringify(detail, null, 2), card);
+    const decisions = p.availableDecisions || ['accept', 'decline'];
+    for (const decision of decisions) {
+      if (!['accept', 'acceptForSession'].includes(decision)) continue;
+      const accept = node(
+        'button',
+        i18n(decision === 'accept' ? 'allowOnce' : 'allowSession'),
+        card,
+      );
+      accept.onclick = () => {
+        respond(
+          message.id,
+          message.method === 'item/permissions/requestApproval'
+            ? { permissions: p.permissions || {}, scope: 'turn' }
+            : { decision },
+        );
+        card.remove();
+        updateTurnStatus(i18n('working'));
+      };
+    }
+
     const deny = node('button', i18n('decline'), card);
     deny.onclick = () => {
       respond(
@@ -803,6 +917,7 @@ addWebUiListener('codex-message', (message) => {
       ]);
     return;
   }
+  commands.notification(message.method, p);
   switch (message.method) {
     case 'bridge/helperMissing':
       installChecking = false;
@@ -893,9 +1008,14 @@ addWebUiListener('codex-message', (message) => {
         record = items.get(p.itemId);
       }
       updateTurnStatus(i18n('thinking'));
-      record.text += p.delta;
-      const pre = record.detail.querySelector('pre');
-      if (pre) pre.textContent = record.text;
+      record.summaries ||= [];
+      const index = p.summaryIndex || 0;
+      record.summaries[index] = (record.summaries[index] || '') + p.delta;
+      record.text = record.summaries.join('\n\n');
+      record.el.hidden = false;
+      markdown(record.detail, record.text);
+      const heading = /^\*\*(.+?)\*\*/.exec(record.text);
+      if (heading) record.label.textContent = heading[1];
       break;
     }
     case 'item/commandExecution/outputDelta': {
@@ -909,6 +1029,74 @@ addWebUiListener('codex-message', (message) => {
       }
       break;
     }
+    case 'turn/plan/updated': {
+      const id = 'plan-' + p.turnId;
+      let record = items.get(id);
+      if (!record) {
+        renderItem({ id, type: 'planUpdate' }, false);
+        record = items.get(id);
+      }
+      record.label.textContent = i18n('updatedPlan');
+      record.state.textContent =
+        (p.plan || []).filter((s) => s.status === 'completed').length + '/' + (p.plan || []).length;
+      record.detail.replaceChildren();
+      if (p.explanation) markdown(node('div', null, record.detail), p.explanation);
+      const list = node('ul', null, record.detail);
+      list.className = 'plan-steps';
+      for (const step of p.plan || []) {
+        const li = node('li', null, list);
+        li.dataset.status = step.status;
+        node(
+          'span',
+          step.status === 'completed' ? '✓' : step.status === 'inProgress' ? '◉' : '○',
+          li,
+        );
+        node('span', step.step, li);
+      }
+      record.el.open = true;
+      break;
+    }
+    case 'item/plan/delta': {
+      if (!items.has(p.itemId)) renderItem({ id: p.itemId, type: 'plan', text: '' }, false);
+      const record = items.get(p.itemId);
+      record.text += p.delta;
+      scheduleMessage(record);
+      break;
+    }
+    case 'item/mcpToolCall/progress': {
+      const record = items.get(p.itemId);
+      if (record) {
+        (record.progress ||= []).push(p.message);
+        record.preview.textContent = p.message;
+        node('p', p.message, record.detail);
+      }
+      break;
+    }
+    case 'item/fileChange/outputDelta': {
+      const record = items.get(p.itemId);
+      if (record) node('pre', p.delta, record.detail);
+      break;
+    }
+    case 'thread/status/changed': {
+      const flags = p.status?.activeFlags || [];
+      if (flags.includes('waitingOnApproval')) updateTurnStatus(i18n('waitingApproval'));
+      else if (flags.includes('waitingOnUserInput')) updateTurnStatus(i18n('waitingAnswer'));
+      break;
+    }
+    case 'thread/compacted':
+      renderItem({ id: 'compaction-' + Date.now(), type: 'contextCompaction' }, true);
+      break;
+    case 'model/rerouted':
+    case 'warning':
+    case 'guardianWarning':
+    case 'configWarning':
+    case 'deprecationNotice':
+      showError(p.message || p.summary || p.reason);
+      break;
+    case 'serverRequest/resolved':
+      for (const card of $('questions').querySelectorAll('.question'))
+        if (card.dataset.requestId === String(p.requestId)) card.remove();
+      break;
     case 'thread/name/updated':
       title(p.threadName);
       break;
@@ -1000,12 +1188,22 @@ window.addEventListener('focus', refreshSetup);
 setInterval(refreshSetup, 2000);
 $('send').onclick = send;
 $('prompt').onkeydown = (e) => {
+  if (commands.keydown(e)) {
+    e.preventDefault();
+    return;
+  }
+  if (e.key === 'Escape' && busy) {
+    e.preventDefault();
+    $('stop').click();
+    return;
+  }
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
     e.preventDefault();
     send();
   }
 };
 $('prompt').oninput = () => {
+  commands.update();
   resizePrompt();
   saveDraft();
 };
@@ -1022,6 +1220,11 @@ $('reconnect').onclick = () => {
   location.reload();
 };
 $('stop').onclick = async () => {
+  try {
+    await commands.interruptGoal();
+  } catch (e) {
+    showError(e.message);
+  }
   if (turnId)
     try {
       await rpc('turn/interrupt', { threadId, turnId });
@@ -1030,21 +1233,24 @@ $('stop').onclick = async () => {
     }
 };
 $('model').onchange = () => {
-  bridge.settings = { model: $('model').value };
+  bridge.settings = { ...bridge.settings, model: $('model').value, effort: undefined };
   localStorage.setItem('codex:model', $('model').value);
   efforts();
   shareSettings();
 };
 $('effort').onchange = () => {
-  bridge.settings = { model: $('model').value, effort: $('effort').value };
+  bridge.settings = { ...bridge.settings, model: $('model').value, effort: $('effort').value };
   localStorage.setItem('codex:effort:' + $('model').value, $('effort').value);
   shareSettings();
 };
 function shareSettings() {
-  bridge.send('codexSettings', [{ model: $('model').value, effort: $('effort').value }]);
+  bridge.send('codexSettings', [
+    { ...bridge.settings, model: $('model').value, effort: $('effort').value },
+  ]);
 }
 addWebUiListener('codex-settings', (value) => {
   bridge.settings = value;
+  commands.setMode(value.mode);
   if (models.some((m) => m.model === value.model)) {
     $('model').value = value.model;
     efforts();
@@ -1103,7 +1309,22 @@ setInterval(refreshVisibleContext, 2000);
 
 function renderUserInput(el, input) {
   el.replaceChildren();
+  const quotes = input.filter(
+    (c) => c.type === 'text' && c.text.startsWith(i18n('selectionQuote') + '\n'),
+  );
+  for (const c of quotes) {
+    const [, sourceTitle, sourceUrl, ...lines] = c.text.split('\n');
+    const quote = node('blockquote', null, el);
+    quote.className = 'page-quote';
+    const source = node('a', sourceTitle || sourceUrl, quote);
+    if (/^https?:\/\//i.test(sourceUrl || '')) source.href = sourceUrl;
+    source.target = '_blank';
+    source.rel = 'noopener noreferrer';
+    source.title = sourceUrl || '';
+    node('div', lines.join('\n').replace(/^\n/, ''), quote);
+  }
   for (const c of input) {
+    if (quotes.includes(c)) continue;
     if (c.type === 'text') node('div', c.text, el);
     else if (
       c.type === 'image' &&
@@ -1127,6 +1348,9 @@ function renderUserInput(el, input) {
       Promise.resolve(attachmentPreviews.get(c.path)).then((url) => {
         if (url) img.src = url;
       });
+    } else if (c.type === 'skill') {
+      if (!input.some((x) => x.type === 'text' && x.text.split(/\s+/).includes('$' + c.name)))
+        node('div', '$' + c.name, el);
     } else if (c.type === 'mention')
       node('div', c.name || c.path?.split('/').pop() || i18n('attachFiles'), el);
   }
@@ -1306,8 +1530,8 @@ document.querySelector('.settings').addEventListener('scroll', () => {
 $('openAgent').hidden = bridge.isTab;
 $('openAgent').onclick = () => openAgentTab().catch((e) => showError(e.message));
 $('newConversation').onclick = () =>
-  newConversation({ model: $('model').value, effort: $('effort').value }).catch((e) =>
-    showError(e.message),
+  newConversation({ ...bridge.settings, model: $('model').value, effort: $('effort').value }).catch(
+    (e) => showError(e.message),
   );
 addWebUiListener('codex-title', (name) => {
   $('title').value = name;

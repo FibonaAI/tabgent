@@ -1008,3 +1008,258 @@ select option {
   background: var(--surface);
   color: var(--ink);
 }
+
+/* Dense transcript, with a single collapsible work log per turn. */
+.message {
+  line-height: 1.6;
+  margin-bottom: 14px;
+}
+.message p {
+  margin-bottom: 10px;
+}
+.worklog {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 10px 0 16px;
+}
+.worklog > summary {
+  cursor: pointer;
+  padding: 4px 0;
+  user-select: none;
+}
+.worklog-items {
+  padding-top: 8px;
+}
+.worklog .message.agent {
+  color: var(--ink);
+  font-size: 13px;
+}
+.worklog .activity {
+  margin-bottom: 3px;
+}
+.activity-detail {
+  border: 0;
+  border-left: 1px solid var(--border);
+  background: none;
+  border-radius: 0;
+  padding-left: 8px;
+}
+.activity-detail > p,
+.activity-detail > div {
+  margin: 6px 12px;
+}
+.activity-detail pre {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.activity-status:empty {
+  display: none;
+}
+.plan-steps {
+  list-style: none;
+  padding: 8px 12px !important;
+  margin: 0 !important;
+}
+.plan-steps li {
+  display: flex;
+  gap: 8px;
+}
+.plan-steps [data-status='inProgress'] {
+  color: var(--ink);
+}
+.plan-steps [data-status='completed'] {
+  opacity: 0.7;
+}
+.bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+#commandMenu {
+  position: absolute;
+  bottom: calc(100% - 4px);
+  left: 24px;
+  right: 24px;
+  z-index: 10;
+  max-height: min(420px, 55dvh);
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px #0002;
+  padding: 6px;
+}
+.menu-title,
+.menu-help {
+  padding: 7px 10px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.menu-help {
+  border-top: 1px solid var(--border);
+}
+.menu-error {
+  color: var(--error);
+  font-size: 12px;
+}
+#commandOptions {
+  max-height: 300px;
+  overflow: auto;
+}
+#commandOptions button {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  text-align: left;
+  padding: 9px 10px;
+}
+#commandOptions button > span {
+  flex: 0 0 115px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+#commandOptions small {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+}
+#commandOptions [aria-selected='true'] {
+  background: var(--hover);
+}
+#commandDialog {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  width: min(480px, calc(100vw - 32px));
+  max-height: 80dvh;
+  overflow: auto;
+}
+#commandDialog::backdrop {
+  background: #0004;
+}
+.dialog-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.dialog-heading h2 {
+  font-size: 16px;
+  margin: 0 0 14px;
+}
+#commandDialog label {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+#commandDialog input:not([type='checkbox']),
+#commandDialog textarea {
+  display: block;
+  width: 100%;
+  margin: 8px 0 12px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+}
+#commandDialog .skill-toggle {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 6px;
+}
+.skill-toggle small {
+  grid-column: 2;
+  color: var(--muted);
+}
+#skillChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 4px 4px 0;
+}
+#skillChips button,
+.skill-reference,
+#planMode {
+  font-size: 12px;
+  background: var(--hover);
+  border-radius: 5px;
+  padding: 4px 7px;
+}
+#planMode {
+  width: fit-content;
+  margin: 6px;
+}
+#goal {
+  font-size: 12px;
+  margin: 0 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+#goal summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+#goal summary span {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#goal summary small {
+  color: var(--muted);
+}
+#goal p {
+  margin: 8px 0;
+}
+#goal button {
+  font-size: 12px;
+  padding: 5px 8px;
+}
+.question button strong,
+.question button small {
+  display: block;
+  text-align: left;
+}
+.question button small {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 3px;
+}
+@media (max-width: 520px) {
+  #commandMenu {
+    left: 12px;
+    right: 12px;
+  }
+  #commandOptions button {
+    gap: 10px;
+  }
+}
+
+.message.user .page-quote {
+  margin: 2px 0 12px;
+  padding: 0 0 0 12px;
+  border-left: 3px solid var(--border);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.page-quote > a {
+  display: block;
+  margin-bottom: 4px;
+  color: inherit;
+  font-size: 12px;
+  text-decoration: none;
+}
+.page-quote > a:hover {
+  text-decoration: underline;
+}

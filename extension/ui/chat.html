@@ -75,6 +75,8 @@
     <footer>
       <button id="jump" aria-label="$i18n{jumpLatest}" hidden>↓</button>
       <div id="questions"></div>
+      <details id="goal" hidden></details>
+      <div id="commandMenu" hidden></div>
       <div class="composer">
         <div id="selection" hidden>
           <button id="selectionText" type="button" aria-expanded="false"></button
@@ -88,11 +90,16 @@
           </button>
         </div>
         <div id="attachments" hidden></div>
+        <div id="skillChips" hidden></div>
+        <div id="planMode" hidden>$i18n{planMode}</div>
         <input id="attachmentFiles" type="file" multiple hidden /><textarea
           id="prompt"
           aria-label="$i18n{promptLabel}"
           placeholder="$i18n{promptPlaceholder}"
           rows="1"
+          aria-autocomplete="list"
+          aria-controls="commandOptions"
+          aria-expanded="false"
         ></textarea>
         <div class="composer-bottom">
           <div class="settings">
@@ -168,8 +175,11 @@
           </button>
         </div>
       </div>
-      <div class="bottom">$i18n{keyboardHint}</div>
+      <div class="bottom">
+        <span>$i18n{keyboardHint}</span><span id="contextUsage" hidden></span>
+      </div>
     </footer>
+    <dialog id="commandDialog" aria-label="$i18n{commands}"></dialog>
     <div id="contextDetails" popover>
       <div id="contextFullTitle"></div>
       <div id="contextFullUrl"></div>

@@ -17,6 +17,8 @@
     "test:browser": "node scripts/test-browser-input.cjs"
   },
   "devDependencies": {
+    "dompurify": "3.4.16",
+    "marked": "18.0.14",
     "playwright": "1.62.1",
     "prettier": "3.9.9"
   },

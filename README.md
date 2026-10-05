@@ -38,6 +38,8 @@ Fill forms, choose options, navigate, and inspect results. Follow the tool calls
 
 <sub>Screenshots show the actual extension UI with illustrative demo content, cropped to the relevant area.</sub>
 
+Type **/** to choose a skill, set a goal, switch models or enter Plan mode. Expand the work log to inspect reasoning summaries, tool calls and progress.
+
 ## Why use this instead of the official extension?
 
 The [official ChatGPT/Codex browser extension](https://learn.chatgpt.com/docs/chrome-extension) also offers side chat, selected-text context, and browser control. This project focuses on a customizable Codex workflow inside Chrome:
