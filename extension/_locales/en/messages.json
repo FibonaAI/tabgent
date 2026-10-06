@@ -6,7 +6,7 @@
     "message": "Chat title"
   },
   "connecting": {
-    "message": "Connecting\u2026"
+    "message": "Connecting…"
   },
   "reconnect": {
     "message": "Reconnect"
@@ -24,7 +24,7 @@
     "message": "Message Codex"
   },
   "promptPlaceholder": {
-    "message": "Ask Codex\u2026"
+    "message": "Ask Codex…"
   },
   "modelLabel": {
     "message": "Model"
@@ -51,13 +51,13 @@
     "message": "Send message"
   },
   "sendHint": {
-    "message": "Send \u00b7 Enter"
+    "message": "Send · Enter"
   },
   "stopLabel": {
     "message": "Stop generating"
   },
   "keyboardHint": {
-    "message": "Enter to send \u00b7 Shift + Enter for a new line"
+    "message": "Enter to send · Shift + Enter for a new line"
   },
   "copied": {
     "message": "Copied"
@@ -75,7 +75,7 @@
     "message": "Completed"
   },
   "working": {
-    "message": "Working\u2026"
+    "message": "Working…"
   },
   "failed": {
     "message": "Failed"
@@ -144,19 +144,19 @@
     "message": "Status"
   },
   "waitingTool": {
-    "message": "Waiting for tool result\u2026"
+    "message": "Waiting for tool result…"
   },
   "copyReply": {
     "message": "Copy response"
   },
   "thinking": {
-    "message": "Thinking\u2026"
+    "message": "Thinking…"
   },
   "replying": {
-    "message": "Responding\u2026"
+    "message": "Responding…"
   },
   "usingTool": {
-    "message": "Using tool\u2026"
+    "message": "Using tool…"
   },
   "reasoning": {
     "message": "Reasoning"
@@ -168,7 +168,7 @@
     "message": "In progress"
   },
   "analyzing": {
-    "message": "Analyzing your question\u2026"
+    "message": "Analyzing your question…"
   },
   "effortLow": {
     "message": "Low"
@@ -201,10 +201,10 @@
     "message": "Connection failed"
   },
   "waitingAnswer": {
-    "message": "Waiting for your answer\u2026"
+    "message": "Waiting for your answer…"
   },
   "waitingApproval": {
-    "message": "Waiting for approval\u2026"
+    "message": "Waiting for approval…"
   },
   "answerPlaceholder": {
     "message": "Enter your answer"
@@ -231,7 +231,7 @@
     "message": "Request failed"
   },
   "retrying": {
-    "message": "Retrying\u2026"
+    "message": "Retrying…"
   },
   "bridgeInstall": {
     "message": "Install Codex Desktop or the Codex CLI first."
@@ -240,7 +240,7 @@
     "message": "Could not start Codex."
   },
   "statusDuration": {
-    "message": "$status$ \u00b7 $duration$ s",
+    "message": "$status$ · $duration$ s",
     "placeholders": {
       "status": {
         "content": "$1"
@@ -254,7 +254,7 @@
     "message": "Install Codex to continue"
   },
   "setupInstallHint": {
-    "message": "Get the desktop app from the official site and move it to Applications. We\u2019ll detect it automatically when you return."
+    "message": "Get the desktop app from the official site and move it to Applications. We’ll detect it automatically when you return."
   },
   "setupInstallAction": {
     "message": "Get Codex"
@@ -263,7 +263,7 @@
     "message": "Check again"
   },
   "setupChecking": {
-    "message": "Checking for Codex\u2026"
+    "message": "Checking for Codex…"
   },
   "setupSignInTitle": {
     "message": "Sign in to Codex"
@@ -275,7 +275,7 @@
     "message": "Sign in with ChatGPT"
   },
   "setupOpening": {
-    "message": "Opening sign-in\u2026"
+    "message": "Opening sign-in…"
   },
   "setupWaiting": {
     "message": "Finish signing in on the page that opened. This chat will connect automatically."
@@ -287,10 +287,10 @@
     "message": "Cancel sign-in"
   },
   "setupLoginFailed": {
-    "message": "Sign-in didn\u2019t finish. Please try again."
+    "message": "Sign-in didn’t finish. Please try again."
   },
   "setupConnecting": {
-    "message": "Connecting your account\u2026"
+    "message": "Connecting your account…"
   },
   "setupInstalled": {
     "message": "Codex detected"
@@ -311,7 +311,7 @@
     "message": "Set up connector"
   },
   "helperStepOne": {
-    "message": "Run \u201cInstall Connector.command\u201d from the extension\u2019s native folder."
+    "message": "Run “Install Connector.command” from the extension’s native folder."
   },
   "helperStepTwo": {
     "message": "Return to your chat and choose Check again. If Codex is missing, the next step will guide you through installation."
@@ -404,10 +404,10 @@
     "message": "Open in Chrome viewer"
   },
   "pdfLoading": {
-    "message": "Loading PDF\u2026"
+    "message": "Loading PDF…"
   },
   "pdfFailed": {
-    "message": "Could not load PDF. Returning to Chrome viewer\u2026"
+    "message": "Could not load PDF. Returning to Chrome viewer…"
   },
   "pdfInvalid": {
     "message": "Invalid PDF URL"
@@ -425,13 +425,13 @@
     "message": "Goal"
   },
   "loading": {
-    "message": "Loading\u2026"
+    "message": "Loading…"
   },
   "noCommands": {
     "message": "No matches"
   },
   "commandKeys": {
-    "message": "\u2191 \u2193 navigate \u00b7 Enter select \u00b7 Esc dismiss"
+    "message": "↑ ↓ navigate · Enter select · Esc dismiss"
   },
   "unavailableRunning": {
     "message": "Available after the current turn finishes"
@@ -646,8 +646,12 @@
   "pendingMessage": {
     "message": "Pending"
   },
-  "messageNotDelivered": { "message": "Not delivered" },
-  "resendMessage": { "message": "Retry" },
+  "messageNotDelivered": {
+    "message": "Not delivered"
+  },
+  "resendMessage": {
+    "message": "Retry"
+  },
   "steerQueued": {
     "message": "Steer"
   },
@@ -669,5 +673,40 @@
   "resumeQueue": {
     "message": "Resume"
   },
-  "confirmStop": { "message": "Press Esc again to stop" }
+  "confirmStop": {
+    "message": "Press Esc again to stop"
+  },
+  "relatedOpen": {
+    "message": "Open conversation"
+  },
+  "lineageFrom": {
+    "message": "Created this conversation from"
+  },
+  "lineageTo": {
+    "message": "Created a new conversation:"
+  },
+  "lineageUntitled": {
+    "message": "New conversation"
+  },
+  "lineageGroup": {
+    "message": "Created $1 new conversations"
+  },
+  "lineageDetails": {
+    "message": "Conversation details"
+  },
+  "lineageCopy": {
+    "message": "Copy thread ID"
+  },
+  "lineageCopied": {
+    "message": "Copied"
+  },
+  "pageHistory": {
+    "message": "Page conversations"
+  },
+  "closeHistory": {
+    "message": "Close conversation history"
+  },
+  "historyEmpty": {
+    "message": "No conversations for this page yet."
+  }
 }

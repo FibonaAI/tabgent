@@ -1,3 +1,4 @@
+import { createUrlHistory } from './url-history.js';
 import { startPdfRouting, pdfSource, isCurrentPdfSender } from './pdf-routing.js';
 import { tool, instructions } from './session-config.js';
 import { browserTool, context } from './browser-tools.js';
@@ -7,25 +8,40 @@ const sessions = new Map(),
   chunks = new Map();
 // Native Chrome owns sidebar visibility and toolbar toggling.
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.warn);
-const agentViews = new Map();
+const urlHistory = createUrlHistory(chrome.storage.local);
+const sidebarViews = new Map();
+const agentViews = new Map(),
+  closedViews = new Map(),
+  openingThreads = new Map();
 let native,
   sequence = 1000;
 const loaded = chrome.storage.session
-  .get(['conversations', 'agentViews'])
-  .then(({ conversations = [], agentViews: views = [] }) => {
-    for (const [key, value] of conversations)
-      sessions.set(key, {
-        ...value,
-        ports: new Set(),
-        turnPending: false,
-        questions: [],
-        pendingQuestions: [],
-      });
-    for (const [tabId, key] of views) agentViews.set(tabId, key);
-  });
+  .get(['conversations', 'agentViews', 'closedViews', 'sidebarViews'])
+  .then(
+    ({
+      conversations = [],
+      agentViews: views = [],
+      closedViews: closed = [],
+      sidebarViews: sidebars = [],
+    }) => {
+      for (const [key, value] of conversations)
+        sessions.set(key, {
+          ...value,
+          ports: new Set(),
+          turnPending: false,
+          questions: [],
+          pendingQuestions: [],
+        });
+      for (const [tabId, key] of views) agentViews.set(tabId, key);
+      for (const [tabId, key] of sidebars) sidebarViews.set(tabId, key);
+      for (const [id, view] of closed) closedViews.set(id, view);
+    },
+  );
 const persist = () =>
   chrome.storage.session.set({
     agentViews: [...agentViews],
+    sidebarViews: [...sidebarViews],
+    closedViews: [...closedViews],
     conversations: [...sessions].map(
       ([key, { ports, turnPending, questions, pendingQuestions, ...s }]) => [key, s],
     ),
@@ -40,7 +56,7 @@ const broadcast = (s, message) => {
 };
 async function getSession(tabId) {
   await loaded;
-  const key = agentViews.has(tabId) ? `sidebar:${tabId}` : tabId;
+  const key = sidebarViews.get(tabId) ?? (agentViews.has(tabId) ? `sidebar:${tabId}` : tabId);
   let s = sessions.get(key);
   if (!s) {
     await chrome.tabs.get(tabId);
@@ -59,11 +75,22 @@ async function getSession(tabId) {
   }
   return s;
 }
-// Chrome's opener metadata covers ordinary links; Agent links use an explicit source.
+async function historyUrl(s) {
+  if (s.noCompanion) return '';
+  const tab = await chrome.tabs.get(s.tabId).catch(() => null);
+  if (!tab || tab.incognito) return '';
+  return pdfSource(tab.url) || tab.url || '';
+}
+async function recordHistory(s) {
+  await urlHistory.record(s, await historyUrl(s));
+}
+// Navigation targets identify webpage links; new-tab and clone actions stay roots.
 async function trackChild(tabId, parent) {
   if (!parent || tabId === parent.tabId || agentViews.has(tabId)) return;
-  const child = await getSession(tabId);
-  if (child.parent) return;
+  return linkSession(await getSession(tabId), parent);
+}
+async function linkSession(child, parent) {
+  if (child === parent || child.parent) return;
   const source = await chrome.tabs.get(parent.tabId).catch(() => ({}));
   child.parent = {
     key: parent.key,
@@ -138,14 +165,6 @@ async function linkChildren() {
     linking = null;
   }
 }
-chrome.tabs.onCreated?.addListener(async (tab) => {
-  if (tab.incognito || !Number.isInteger(tab.openerTabId)) return;
-  await loaded;
-  const parent = agentViews.has(tab.openerTabId)
-    ? sessions.get(agentViews.get(tab.openerTabId))
-    : await getSession(tab.openerTabId);
-  await trackChild(tab.id, parent).catch(console.warn);
-});
 chrome.webNavigation.onCreatedNavigationTarget?.addListener(async ({ sourceTabId, tabId }) => {
   await loaded;
   const tab = await chrome.tabs.get(tabId).catch(() => null);
@@ -200,6 +219,7 @@ async function receive(message) {
   const m = message.message;
   if (m.method === 'bridge/ready' && m.params?.threadId) {
     s.threadId = m.params.threadId;
+    void recordHistory(s).catch(console.warn);
     await persist();
     void linkChildren().catch(console.warn);
   }
@@ -272,6 +292,15 @@ async function receive(message) {
         return;
       }
       if (['turn/start', 'thread/queue/start'].includes(r.method) && m.error) s.turnPending = false;
+      if (r.method === 'bridge/thread/relations' && m.result) {
+        const entries = [...(m.result.parents || []), ...(m.result.children || [])];
+        s.relatedThreads = entries.map((entry) => entry.threadId);
+        await persist();
+        for (const entry of entries)
+          entry.title =
+            [...sessions.values()].find((owner) => owner.threadId === entry.threadId)?.title ||
+            entry.title;
+      }
       event(r.port, 'codex-message', { ...m, id: r.id });
     }
     return;
@@ -364,6 +393,7 @@ chrome.runtime.onConnect.addListener((port) => {
       }
       if (msg.type === 'bind') {
         s.threadId = msg.threadId;
+        await recordHistory(s);
         for (const p of s.ports) if (p !== port) event(p, 'codex-thread', s.threadId);
         await persist();
         void linkChildren().catch(console.warn);
@@ -452,7 +482,15 @@ chrome.runtime.onConnect.addListener((port) => {
           await chrome.tabs.create({ url: u.href });
       }
       if (msg.name === 'title') {
+        const changed = s.title !== arg;
+        s.title = arg;
+        if (changed) await recordHistory(s);
         for (const p of s.ports) event(p, 'codex-title', arg);
+        if (changed) {
+          await persist();
+          for (const owner of sessions.values())
+            broadcast(owner, { method: 'bridge/lineageChanged' });
+        }
       }
     } catch (e) {
       if (!session) port.postMessage({ type: 'attachError', message: e.message });
@@ -467,6 +505,10 @@ chrome.runtime.onConnect.addListener((port) => {
 });
 async function openAgentTab(session, windowId) {
   const tab = await chrome.tabs.create({ url: 'about:blank', active: false, windowId });
+  if (session.tabId == null) {
+    session.tabId = tab.id;
+    session.noCompanion = true;
+  }
   agentViews.set(tab.id, session.key);
   await persist();
   await chrome.tabs.update(tab.id, { url: chrome.runtime.getURL('ui/chat.html'), active: true });
@@ -543,6 +585,93 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       await trackChild(tab.id, source);
       return { tabId: tab.id };
     }
+    if (msg.type === 'urlHistory' || msg.type === 'switchHistory') {
+      await loaded;
+      const source = sessions.get(msg.conversationKey);
+      if (!source) throw Error('Conversation not found');
+      await Promise.all([...sessions.values()].filter((s) => !s.closedTab).map(recordHistory));
+      const url = await historyUrl(source);
+      const entries = await urlHistory.list(url);
+      if (msg.type === 'urlHistory') return { url, entries, current: source.threadId };
+      const entry = entries.find((item) => item.threadId === msg.threadId);
+      if (!entry) throw Error('Conversation does not belong to this URL');
+      let target = [...sessions.values()].find(
+        (s) => s.threadId === entry.threadId && !s.closedTab,
+      );
+      if (!target) {
+        const id = crypto.randomUUID();
+        target = {
+          id,
+          key: id,
+          tabId: source.tabId,
+          threadId: entry.threadId,
+          title: entry.title,
+          scope: entry.scope || source.scope,
+          settings: entry.settings,
+          draft: '',
+          ports: new Set(),
+        };
+        sessions.set(id, target);
+      }
+      target.tabId = source.tabId;
+      target.noCompanion = source.noCompanion;
+      if (sender.tab && agentViews.has(sender.tab.id)) {
+        agentViews.set(sender.tab.id, target.key);
+      } else {
+        sidebarViews.set(source.tabId, target.key);
+      }
+      await persist();
+      return {};
+    }
+    if (msg.type === 'openRelatedThread') {
+      await loaded;
+      const source = sessions.get(msg.conversationKey);
+      if (!source?.relatedThreads?.includes(msg.threadId))
+        throw Error('Conversation is not related');
+      if (openingThreads.has(msg.threadId)) return openingThreads.get(msg.threadId);
+      const operation = (async () => {
+        let target = [...sessions.values()].find(
+          (s) => s.threadId === msg.threadId && !s.closedTab,
+        );
+        if (target) {
+          const view = [...agentViews].find(([, key]) => key === target.key);
+          const tabId = target.viewOnly ? view?.[0] : target.tabId;
+          if (tabId != null) {
+            if (!target.viewOnly && !agentViews.has(tabId))
+              chrome.sidePanel.open({ tabId }).catch(() => {});
+            const tab = await chrome.tabs.update(tabId, { active: true });
+            await chrome.windows.update(tab.windowId, { focused: true });
+            return { tabId: tab.id };
+          }
+        }
+        const saved = closedViews.get(msg.threadId);
+        const companion =
+          saved?.tabId != null ? await chrome.tabs.get(saved.tabId).catch(() => null) : null;
+        const id = crypto.randomUUID();
+        target = {
+          id,
+          key: id,
+          threadId: msg.threadId,
+          tabId: companion?.id ?? null,
+          scope: saved?.scope || 'window',
+          settings: saved?.settings,
+          viewOnly: true,
+          draft: '',
+          ports: new Set(),
+        };
+        sessions.set(id, target);
+        const owner = await chrome.tabs.get(source.tabId);
+        const result = await openAgentTab(target, owner.windowId);
+        await chrome.windows.update(owner.windowId, { focused: true });
+        return result;
+      })();
+      openingThreads.set(msg.threadId, operation);
+      try {
+        return await operation;
+      } finally {
+        openingThreads.delete(msg.threadId);
+      }
+    }
     if (msg.type === 'openAgent') {
       await loaded;
       const s = sessions.get(msg.conversationKey);
@@ -577,11 +706,18 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
 chrome.tabs.onRemoved.addListener(async (id) => {
   await loaded;
   agentViews.delete(id);
+  sidebarViews.delete(id);
   for (const [key, s] of sessions) {
-    const remaining = [...agentViews].find(([, owner]) => owner === key);
+    const remaining = [...agentViews, ...sidebarViews].find(([, owner]) => owner === key);
     if (s.tabId !== id && !(s.viewOnly && !remaining)) continue;
     if (remaining) s.tabId = remaining[0];
     else {
+      if (s.threadId)
+        closedViews.set(s.threadId, {
+          tabId: s.noCompanion ? null : s.tabId,
+          scope: s.scope,
+          settings: s.settings,
+        });
       for (const child of sessions.values())
         if (child.parent?.key === key) child.parent.threadId ||= s.threadId;
       if (
@@ -596,11 +732,13 @@ chrome.tabs.onRemoved.addListener(async (id) => {
     }
   }
   await persist();
+  for (const session of sessions.values()) broadcast(session, { method: 'bridge/lineageChanged' });
 });
 chrome.webNavigation.onCommitted.addListener(async (detail) => {
   await loaded;
   for (const s of sessions.values()) {
     if (s.tabId !== detail.tabId) continue;
+    if (detail.frameId === 0) void recordHistory(s).catch(console.warn);
     if (s.selection && (detail.frameId === 0 || s.selection.frameId === detail.frameId)) {
       s.selection = null;
       await persist();

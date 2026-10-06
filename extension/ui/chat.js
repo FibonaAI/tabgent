@@ -1,9 +1,12 @@
+import { createRelations, isLineageNote } from './relations.js';
 import { createFollowups, selectionContextPrefix } from './followups.js';
 import { createCommands } from './commands.js';
 import { markdownFragment } from './markdown.js';
 import {
   bridge,
+  pageHistory,
   openAgentTab,
+  openRelatedThread,
   openConversationLink,
   newConversation,
   startBridge,
@@ -262,6 +265,62 @@ function markdown(target, text) {
   }
   target.replaceChildren(fragment);
 }
+let historyRevision = 0;
+async function refreshHistory() {
+  if ($('historyPanel').hidden) return;
+  const revision = ++historyRevision;
+  try {
+    const result = await pageHistory();
+    if (revision !== historyRevision) return;
+    $('historyUrl').textContent = result.url;
+    $('historyUrl').title = result.url;
+    $('historyList').replaceChildren();
+    for (const entry of result.entries) {
+      const button = document.createElement('button');
+      button.className = 'history-entry';
+      button.setAttribute('aria-current', String(entry.threadId === result.current));
+      const name = document.createElement('span');
+      name.textContent = entry.title || i18n('newChat');
+      button.title = name.textContent;
+      const date = document.createElement('small');
+      date.textContent = new Date(entry.updatedAt).toLocaleString();
+      button.append(name, date);
+      button.onclick = async () => {
+        if (entry.threadId === threadId) return;
+        saveDraft();
+        button.disabled = true;
+        try {
+          await pageHistory(entry.threadId);
+          location.reload();
+        } catch (e) {
+          button.disabled = false;
+          showError(e.message);
+        }
+      };
+      $('historyList').append(button);
+    }
+    if (!result.entries.length) $('historyList').textContent = i18n('historyEmpty');
+  } catch (e) {
+    $('historyList').textContent = e.message;
+  }
+}
+function toggleHistory(open) {
+  $('historyPanel').hidden = !open;
+  $('historyToggle').setAttribute('aria-expanded', String(open));
+  document.body.classList.toggle('history-open', open);
+  sessionStorage.setItem('historyOpen', String(open));
+  if (open) void refreshHistory();
+}
+$('historyToggle').onclick = () => toggleHistory($('historyPanel').hidden);
+$('historyClose').onclick = () => toggleHistory(false);
+if (sessionStorage.getItem('historyOpen') === 'true') toggleHistory(true);
+const relations = createRelations({
+  rpc,
+  i18n,
+  open: openRelatedThread,
+  error: showError,
+  ready: () => ready,
+});
 const commands = createCommands({
   rpc,
   error: showError,
@@ -427,8 +486,8 @@ function toolDetails(record, item, completed) {
   if (failed && !item.error && !outputs.length) section(i18n('result'), i18n('toolFailed'));
   if (!completed && !outputs.length) section(i18n('status'), i18n('waitingTool'));
 }
-function renderItem(item, completed = true) {
-  if (!item?.id) return;
+function renderItem(item, completed = true, timestamp = Date.now()) {
+  if (!item?.id || isLineageNote(item)) return;
   let record = items.get(item.id);
   const optimisticIndex =
     item.type === 'userMessage'
@@ -446,6 +505,9 @@ function renderItem(item, completed = true) {
       null,
       activity || item.phase === 'commentary' ? activityLog() : $('messages'),
     );
+    el.dataset.timestamp = String(timestamp);
+    if (el.parentElement !== $('messages'))
+      el.parentElement.dataset.timestamp ||= String(timestamp);
     record = { el, text: '', type: item.type };
     items.set(item.id, record);
     if (activity) {
@@ -690,14 +752,20 @@ async function completeSetup() {
     }
     const thread = response.thread;
     threadCwd = thread.cwd;
-    title(thread.name || thread.preview?.slice(0, 48) || i18n('newChat'));
+    title(
+      thread.name ||
+        (!thread.preview?.startsWith('Browser conversation lineage (') &&
+          thread.preview?.slice(0, 48)) ||
+        i18n('newChat'),
+    );
     if (!bridge.settings?.model && thread.model && models.some((m) => m.model === thread.model)) {
       $('model').value = thread.model;
       efforts();
     }
     for (const turn of thread.turns || []) {
       worklog = null;
-      for (const item of turn.items || []) renderItem(item);
+      for (const item of turn.items || [])
+        renderItem(item, true, turn.startedAt ? turn.startedAt * 1000 : Date.now());
       if (turn.status !== 'inProgress' && turn.items?.length) {
         const outcome =
           turn.status === 'failed'
@@ -728,6 +796,8 @@ async function completeSetup() {
       followups.pause(thread.turns?.at(-1)?.status === 'interrupted');
     }
     ready = true;
+    void refreshHistory();
+    void relations.refresh();
     commands.setMode(bridge.settings?.mode);
     void commands.initialize();
     void followups.refresh();
@@ -1248,6 +1318,9 @@ addWebUiListener('codex-message', (message) => {
       for (const card of $('questions').querySelectorAll('.question'))
         if (card.dataset.requestId === String(p.requestId)) card.remove();
       break;
+    case 'bridge/lineageChanged':
+      void relations.refresh();
+      break;
     case 'thread/name/updated':
       title(p.threadName);
       break;
@@ -1302,6 +1375,7 @@ $('selectionRemove').onclick = () => {
 };
 addWebUiListener('codex-context', (value) => {
   context = value;
+  void refreshHistory();
   $('context').hidden = !value.page;
   $('contextText').textContent = value.page ? value.page.title || value.page.url : '';
   $('contextFullTitle').textContent = value.page?.title || '';

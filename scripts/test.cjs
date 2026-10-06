@@ -3,6 +3,7 @@ const { spawnSync } = require('node:child_process');
 for (const file of [
   'guards.mjs',
   'conversations.mjs',
+  'url-history.mjs',
   'selection-routing.mjs',
   'native-disconnect.mjs',
   'attachments.py',

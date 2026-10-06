@@ -210,9 +210,7 @@ class Session:
             if self.starting or self.closed:
                 return
             self.starting = True
-        # Serialize startup against shared Codex database/config initialization.
-        with START_LOCK:
-            self.start_server()
+        self.start_server()
 
     def start_server(self):
         if self.closed:
@@ -256,14 +254,16 @@ class Session:
                 },
             )
             self.write({"method": "initialized"})
-            project = self.rpc(
-                "project/create",
-                {
-                    "idempotencyKey": "browser-agent-connector",
-                    "name": "Browser Agent Connector",
-                    "roots": [{"path": str(workspace)}],
-                },
-            )
+            # Only shared project creation needs serialization, not account/network checks.
+            with START_LOCK:
+                project = self.rpc(
+                    "project/create",
+                    {
+                        "idempotencyKey": "browser-agent-connector",
+                        "name": "Browser Agent Connector",
+                        "roots": [{"path": str(workspace)}],
+                    },
+                )
             self.project_id = project["project"]["id"]
             account = self.rpc("account/read")
             if account.get("account") or account.get("requiresOpenaiAuth") is False:
@@ -277,8 +277,8 @@ class Session:
                 )
                 self.thread = self.thread_response["thread"]
             self.ready = True
-            lineage.flush(self, HOME)
             self.emit_ready()
+            POOL.submit(self.sync_lineage)
         except Exception:
             self.starting = False
             if self.process and self.process.poll() is None:
@@ -287,6 +287,12 @@ class Session:
             self.emit(
                 {"method": "bridge/error", "params": {"messageKey": "bridgeLaunch"}}
             )
+
+    def sync_lineage(self):
+        try:
+            lineage.flush(self, HOME)
+        except Exception:
+            pass  # Durable notes retry before the next user input.
 
     def thread_params(self, params):
         return {
@@ -305,6 +311,15 @@ class Session:
 
     def request(self, message, lineage_flushed=False):
         method = message.get("method")
+        if method == "bridge/thread/relations":
+            def read_relations():
+                try:
+                    result = lineage.relatives(self, HOME)
+                    self.emit({"id": message["id"], "result": result})
+                except Exception as error:
+                    self.emit({"id": message["id"], "error": {"code": -32000, "message": str(error)}})
+            POOL.submit(read_relations)
+            return
         if method == "bridge/thread/link":
             def link_threads():
                 try:
@@ -317,6 +332,7 @@ class Session:
                     # a browser tool result or the child's first message.
                     self.emit({"id": message["id"], "result": {}})
                     for session in list(SESSIONS.values()):
+                        session.emit({"method": "bridge/lineageChanged"})
                         try:
                             lineage.flush(session, HOME)
                         except Exception:
@@ -328,6 +344,7 @@ class Session:
                         temporary = Session("lineage", CONFIG or {}, thread_id)
                         try:
                             temporary.start()
+                            lineage.flush(temporary, HOME)
                         finally:
                             temporary.close()
                 except Exception as error:

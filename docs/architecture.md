@@ -98,7 +98,9 @@ New tabs opened from webpage links, Agent conversation links, or the browser too
 retain their source conversation. When both threads are available, the connector
 records reciprocal parent/child notes with thread IDs and source page metadata.
 The notes are appended with `thread/inject_items`, without copying history or
-starting a model turn. Opening another view of the same Agent is not a branch.
+starting a model turn. The browser new-tab button and Agent + create independent
+root conversations; Agent + copies page context and settings only. Opening another
+view of the same Agent is not a branch.
 
 Relationships are journaled under
 `$CODEX_HOME/projects/browser-agent-connector/lineage/`. The native host checks
@@ -107,3 +109,26 @@ before new input. Closed parents can be resumed briefly to record their note;
 locked/unavailable threads retain pending notes until the connector can access them.
 Agents can use the IDs to look up local Codex session history. Page titles and URLs
 in the notes are explicitly untrusted data.
+
+The chat renders each relationship as a chronological notice in the message stream,
+using `bridge/thread/relations` to read the same durable records injected into the
+model's context. Child chats identify their parent; parent chats announce each child.
+Titles link to existing conversation tabs and focus their windows. Closed tabs reopen
+the same thread; IDs remain available in a details menu. Adjacent child notices created
+within a minute collapse into a group. Reconnects and duplicate notifications do not
+duplicate notices.
+
+
+## Page conversation history
+
+The collapsible Page conversations drawer indexes thread IDs, titles, settings, and
+associated URLs in `chrome.storage.local`. Conversation content stays in Codex's
+session storage. Exact URLs (including queries and fragments) remain distinct; the
+PDF viewer uses its original document URL. One conversation can be associated with
+multiple URLs as its companion tab navigates.
+
+Selecting history remaps the current Agent view to the existing session, or resumes
+the stored thread ID when it is no longer active. It does not create lineage. Drafts
+and attachments stay with their sessions. The index survives browser restarts, but
+clearing extension data removes it. Existing open sessions are indexed on first use;
+closed conversations predating this feature cannot be reconstructed reliably.

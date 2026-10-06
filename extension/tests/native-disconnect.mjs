@@ -23,6 +23,7 @@ globalThis.chrome = {
     connectNative: () => native,
   },
   storage: {
+    local: { get: async () => ({}), set: async () => {} },
     session: {
       get: async () => ({
         conversations: [

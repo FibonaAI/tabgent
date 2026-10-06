@@ -63,3 +63,25 @@ def flush(session, home):
             }]})
             completed.add(marker)
             session.populated = True
+
+
+def relatives(session, home):
+    """Read persisted relationships even after the related browser tab closes."""
+    if not session.thread:
+        return {'parents': [], 'children': []}
+    ident = session.thread['id']
+    root = home / 'projects/browser-agent-connector/lineage'
+    result = {'parents': [], 'children': []}
+    with LOCK:
+        for path in [*root.glob(f'{ident}_*.json'), *root.glob(f'*_{ident}.json')]:
+            link = json.loads(path.read_text())
+            kind = 'children' if link['parent'] == ident else 'parents'
+            thread_id = link['child'] if kind == 'children' else link['parent']
+            result[kind].append({'threadId': thread_id, 'createdAt': path.stat().st_mtime * 1000})
+    for entry in [*result['parents'], *result['children']]:
+        try:
+            thread = session.rpc('thread/read', {'threadId': entry['threadId']})['thread']
+            entry['title'] = thread.get('name') or ''
+        except Exception:
+            entry['title'] = ''
+    return result

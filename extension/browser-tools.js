@@ -18,7 +18,8 @@ export async function context(session) {
   const agentPage = tab.url?.startsWith(chrome.runtime.getURL('ui/chat.html'));
   return {
     scope: session.scope,
-    page: !tab.incognito && (allowed(tab) || agentPage) ? pdfTab(tab) : null,
+    page:
+      !session.noCompanion && !tab.incognito && (allowed(tab) || agentPage) ? pdfTab(tab) : null,
     ...(allowed(tab) && !newTab(tab)
       ? { contentType: pdfSource(tab.url) ? 'application/pdf' : await contentType(tab.id) }
       : {}),

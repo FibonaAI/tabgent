@@ -33,6 +33,7 @@ export const bridge={threadId:null,send(name,args=[]){
  if(m.method==='thread/goal/get')result={goal:null};
  if(m.method==='thread/goal/set')result={goal:{objective:m.params.objective||'Test goal',status:m.params.status||'active',tokensUsed:0,timeUsedSeconds:0}};
  if(m.method==='turn/start')result={turn:{id:'test-turn'}};
+ if(m.method==='bridge/thread/relations')result=window.setupTest.relations||{parents:[],children:[]};
  if(m.method==='account/read')result={account:authenticated?{type:'chatgpt'}:null,requiresOpenaiAuth:true};
  if(m.method==='account/login/start')result={loginId:'test-login',authUrl:'https://auth.openai.com/test-only'};
  if(m.method==='model/list')result={data:[{model:'test-model',displayName:'Test model',isDefault:true,supportedReasoningEfforts:[{reasoningEffort:'medium'}]}]};
@@ -46,6 +47,11 @@ export const bridge={threadId:null,send(name,args=[]){
 }};
 window.setupTest={emit,requests:[],actions:[],context(value){listeners.get('codex-context')?.(value);},select(value){listeners.get('codex-selection')?.(value);},install(){sessionStorage.installed='true';sessionStorage.helper='true';},externalLogin(){sessionStorage.auth='true';},complete(){authenticated=true;sessionStorage.auth='true';emit('account/login/completed',{success:true,loginId:'test-login'});},fail(){emit('account/login/completed',{success:false,loginId:'test-login'});}};
 export async function openConversationLink(url,active){window.setupTest.actions.push({name:'openConversationLink',url,active})}
+export async function openRelatedThread(threadId){window.setupTest.actions.push({name:'openRelatedThread',threadId})}
+export async function pageHistory(threadId){
+ if(threadId){window.setupTest.actions.push({name:'switchHistory',threadId});throw Error('Fixture switch');}
+ return {url:'https://example.test/paper.pdf',current:'test-thread',entries:[{threadId:'test-thread',title:'Current conversation',updatedAt:1700000000000},{threadId:'older-thread',title:'Earlier research',updatedAt:1690000000000}]};
+}
 export async function newConversation(){}
 export async function openAgentTab(){window.setupTest.actions.push({name:'openAgent'})}
 export async function startBridge(){if(mode==='attach-failure')throw Error('Missing tab');}
@@ -127,6 +133,129 @@ export function saveScopePreference(){}
       if (mode === 'transcript') {
         await page.waitForFunction(
           () => document.querySelector('#connection').dataset.state === 'ready',
+        );
+        assert.equal(await page.locator('#relations').count(), 0);
+        await page.locator('#historyToggle').click();
+        await page.waitForSelector('.history-entry');
+        assert.equal(await page.locator('.history-entry').count(), 2);
+        assert.equal(
+          await page.locator('.history-entry[aria-current="true"] span').innerText(),
+          'Current conversation',
+        );
+        await page.locator('.history-entry').last().click();
+        assert.equal(
+          (await page.evaluate(() => setupTest.actions.at(-1))).threadId,
+          'older-thread',
+        );
+        await page.evaluate(() =>
+          document.querySelectorAll('#messages .error').forEach((node) => node.remove()),
+        );
+        await page.locator('#historyClose').click();
+        assert(await page.locator('#historyPanel').isHidden());
+
+        await page.evaluate(() => {
+          const previous = document.createElement('article');
+          previous.id = 'lineage-timeline-fixture';
+          previous.dataset.timestamp = '1500';
+          previous.textContent = 'Earlier conversation message';
+          document.querySelector('#messages').append(previous);
+          setupTest.relations = {
+            parents: [
+              { threadId: 'parent-123', title: 'Parent research', canOpen: true, createdAt: 1000 },
+            ],
+            children: [
+              {
+                threadId: 'child-456',
+                title: '<img src=x onerror=alert(1)>',
+                canOpen: false,
+                createdAt: 2000,
+              },
+            ],
+          };
+          setupTest.emit('bridge/lineageChanged');
+        });
+        await page.waitForFunction(
+          () => document.querySelectorAll('#messages .lineage-message').length === 2,
+        );
+        assert(
+          (await page.locator('.lineage-message').first().textContent()).includes(
+            'Created this conversation from Parent research',
+          ),
+        );
+        assert(
+          (await page.locator('.lineage-message').last().textContent()).includes(
+            'Created a new conversation:',
+          ),
+        );
+        assert.deepEqual(
+          await page
+            .locator('#messages > *')
+            .evaluateAll((nodes) => nodes.map((n) => n.dataset.timestamp)),
+          ['1000', '1500', '2000'],
+        );
+        await page.locator('.lineage-link').first().click();
+        assert.deepEqual(await page.evaluate(() => setupTest.actions.at(-1)), {
+          name: 'openRelatedThread',
+          threadId: 'parent-123',
+        });
+        assert(await page.locator('.lineage-link').last().isEnabled());
+        assert.equal(await page.locator('.lineage-message img').count(), 0);
+        assert(
+          !(await page.locator('.lineage-message').first().innerText()).includes('parent-123'),
+        );
+        await page.locator('.lineage-details summary').first().click();
+        assert(await page.locator('.lineage-details code').first().isVisible());
+        assert.equal(
+          await page.locator('.lineage-details code').first().textContent(),
+          'parent-123',
+        );
+        await page.evaluate(() => setupTest.emit('bridge/lineageChanged'));
+        await page.waitForTimeout(100);
+        assert.equal(await page.locator('.lineage-message').count(), 2);
+        await page.evaluate(() => {
+          setupTest.relations.children.push({ threadId: 'child-789', title: '', createdAt: 2001 });
+          setupTest.emit('bridge/lineageChanged');
+        });
+        await page.waitForSelector('.lineage-group');
+        assert.equal(
+          await page.locator('.lineage-group > summary').innerText(),
+          'Created 2 new conversations',
+        );
+        assert(!(await page.locator('.lineage-group .lineage-link').last().isVisible()));
+        await page.locator('.lineage-group > summary').click();
+        assert.equal(
+          await page.locator('.lineage-group .lineage-link').last().innerText(),
+          'New conversation',
+        );
+        await page.locator('.lineage-group .lineage-link').last().click();
+        assert.equal((await page.evaluate(() => setupTest.actions.at(-1))).threadId, 'child-789');
+        await page.evaluate(() => {
+          setupTest.relations.children[1].title = 'Updated title';
+          setupTest.emit('bridge/lineageChanged');
+        });
+        await page.waitForFunction(
+          () =>
+            document.querySelector('.lineage-group')?.open &&
+            document.querySelector('.lineage-group').textContent.includes('Updated title'),
+        );
+        const noteHidden = await page.evaluate(async () => {
+          const { isLineageNote } = await import('/ui/relations.js');
+          return isLineageNote({
+            type: 'userMessage',
+            content: [
+              {
+                text: 'Browser conversation lineage (context only; no reply required).\nSome metadata\nReference: browser-lineage:11111111-1111-1111-1111-111111111111:22222222-2222-2222-2222-222222222222:22222222-2222-2222-2222-222222222222',
+              },
+            ],
+          });
+        });
+        assert(noteHidden, 'Raw injected notes must not duplicate the visible notice');
+        await page
+          .locator('#messages')
+          .screenshot({ path: '/tmp/bac-lineage-messages-preview.png' });
+        await page.evaluate(() => document.querySelector('#lineage-timeline-fixture').remove());
+        console.log(
+          'PASS chronological parent/child messages, live updates, deduplication, safe titles and open',
         );
         await page.locator('#prompt').fill('/');
         await page

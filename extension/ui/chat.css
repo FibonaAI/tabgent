@@ -1373,3 +1373,145 @@ select option {
 .message .katex {
   font-size: 1.1em;
 }
+
+.lineage-message,
+.lineage-group {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 12px 0;
+}
+.lineage-message {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+.lineage-icon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  align-self: center;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.lineage-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.lineage-link {
+  padding: 0;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.lineage-details {
+  position: relative;
+  flex: none;
+}
+.lineage-details summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.lineage-details summary::-webkit-details-marker {
+  display: none;
+}
+.lineage-details > div {
+  position: absolute;
+  right: 0;
+  top: 24px;
+  z-index: 2;
+  width: min(285px, 75vw);
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 4px 14px #0001;
+}
+.lineage-details code {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  user-select: text;
+}
+.lineage-details button {
+  font-size: 11px;
+  padding: 5px 0 0;
+}
+.lineage-group > summary {
+  cursor: pointer;
+}
+.lineage-group > summary .lineage-icon {
+  vertical-align: -2px;
+  margin-right: 7px;
+}
+.lineage-group > .lineage-message {
+  margin-left: 18px;
+}
+
+#historyPanel {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 220px;
+  z-index: 20;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 12px;
+}
+.history-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.history-heading strong {
+  font-size: 13px;
+}
+#historyUrl {
+  color: var(--muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-entry {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 4px 0;
+}
+.history-entry span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.history-entry small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.history-entry[aria-current='true'] {
+  background: var(--bubble);
+}
+body.history-open {
+  padding-left: 220px;
+}
+@media (max-width: 600px) {
+  body.history-open {
+    padding-left: 0;
+  }
+  #historyPanel {
+    width: min(260px, 85vw);
+    box-shadow: 8px 0 24px #00000015;
+  }
+}

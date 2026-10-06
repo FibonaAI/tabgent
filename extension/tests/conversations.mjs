@@ -15,7 +15,23 @@ let nextTab = 1,
 const sent = [];
 const closedPanels = [];
 const panelOptions = [];
-const native = { onMessage: event(), onDisconnect: event(), postMessage: (m) => sent.push(m) };
+const linkCalls = [];
+const native = {
+  onMessage: event(),
+  onDisconnect: event(),
+  postMessage(message) {
+    sent.push(message);
+    if (message.message?.method === 'bridge/thread/link') {
+      linkCalls.push(message.message.params);
+      queueMicrotask(() =>
+        native.onMessage.emit({
+          session: message.session,
+          message: { id: message.message.id, result: {} },
+        }),
+      );
+    }
+  },
+};
 globalThis.chrome = {
   runtime: {
     id: 'test',
@@ -25,8 +41,12 @@ globalThis.chrome = {
     onInstalled: event(),
     connectNative: () => native,
   },
-  storage: { session: { get: async () => ({}), set: async (v) => Object.assign(saved, v) } },
+  storage: {
+    local: { get: async () => ({}), set: async () => {} },
+    session: { get: async () => ({}), set: async (v) => Object.assign(saved, v) },
+  },
   sidePanel: {
+    open: async () => {},
     close: async (options) => {
       closedPanels.push(options);
     },
@@ -148,6 +168,36 @@ assert.notEqual(freshState.conversationKey, 1);
 await freshView.send({ type: 'ui', name: 'codexContext' });
 assert.equal(freshView.messages.at(-1).value.page.id, 1);
 await freshView.send({ type: 'bind', threadId: 'fresh-thread' });
+await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(linkCalls.length, 0, 'Agent + copies settings without creating lineage');
+assert.equal(
+  saved.conversations.find(([key]) => key === freshState.conversationKey)[1].parent,
+  undefined,
+);
+const historyList = await call({ type: 'urlHistory', conversationKey: 1 });
+assert.equal(historyList.entries.length, 2, 'Both chats belong to the same URL');
+assert(
+  !(await call({ type: 'switchHistory', conversationKey: 1, threadId: 'fresh-thread' })).error,
+);
+assert.equal((await attach(1)).messages[0].state.threadId, 'fresh-thread');
+assert(
+  (
+    await call({
+      type: 'switchHistory',
+      conversationKey: freshState.conversationKey,
+      threadId: 'unrelated',
+    })
+  ).error,
+);
+assert(
+  !(
+    await call({
+      type: 'switchHistory',
+      conversationKey: freshState.conversationKey,
+      threadId: 'thread-one',
+    })
+  ).error,
+);
 assert.equal((await attach(1)).messages[0].state.threadId, 'thread-one');
 const freshSession = saved.conversations.find(([key]) => key === freshState.conversationKey)[1];
 tabs.delete(fresh.tabId);
@@ -200,31 +250,29 @@ console.log(
   'PASS shared Agent tab / original page context / independent sidebar / draft sync / close lifecycle',
 );
 
+// Browser + remains a root even if Chrome supplies opener metadata.
+const rootTab = await chrome.tabs.create({ url: 'chrome://newtab/', openerTabId: 1 });
+await chrome.tabs.onCreated.emit(rootTab);
+const rootView = await attach(rootTab.id);
+await rootView.send({ type: 'bind', threadId: 'new-root-thread' });
+assert.equal(saved.conversations.find(([key]) => key === rootTab.id)[1].parent, undefined);
+assert.equal(linkCalls.length, 0);
+
 // Browser links and explicit conversation links retain their actual parent.
-const linkCalls = [];
-native.postMessage = (message) => {
-  sent.push(message);
-  if (message.message?.method === 'bridge/thread/link') {
-    linkCalls.push(message.message.params);
-    queueMicrotask(() =>
-      native.onMessage.emit({
-        session: message.session,
-        message: { id: message.message.id, result: {} },
-      }),
-    );
-  }
-};
+linkCalls.length = 0;
 const origin = await chrome.tabs.create({ url: 'https://parent.test/' });
 const originView = await attach(origin.id);
 await originView.send({ type: 'bind', threadId: 'parent-thread' });
 const childTab = await chrome.tabs.create({ url: 'https://child.test/', openerTabId: origin.id });
 await chrome.tabs.onCreated.emit(childTab);
-await chrome.webNavigation.onCreatedNavigationTarget.emit({
-  sourceTabId: origin.id,
-  tabId: childTab.id,
-});
+for (let i = 0; i < 2; i++)
+  await chrome.webNavigation.onCreatedNavigationTarget.emit({
+    sourceTabId: origin.id,
+    tabId: childTab.id,
+  });
 let childSession = saved.conversations.find(([key]) => key === childTab.id)[1];
 assert.equal(childSession.parent.threadId, 'parent-thread');
+tabs.delete(origin.id);
 await chrome.tabs.onRemoved.emit(origin.id);
 assert(
   saved.conversations.some(([key]) => key === origin.id),
@@ -268,7 +316,74 @@ await native.onMessage.emit({
   message: { method: 'bridge/ready', params: { threadId: 'linked-thread' } },
 });
 await new Promise((resolve) => setTimeout(resolve, 0));
-assert.equal(linkCalls[1].parentThreadId, 'full-agent-thread');
+assert.equal(
+  linkCalls.find((link) => link.childThreadId === 'linked-thread').parentThreadId,
+  'full-agent-thread',
+);
+// Only known relatives can open; the existing Agent tab is reused.
+const relatedView = await attach(childTab.id);
+await relatedView.send({
+  type: 'ui',
+  name: 'codexRpc',
+  args: [{ id: 900, method: 'bridge/thread/relations' }],
+});
+const relationRequest = sent.at(-1);
+await native.onMessage.emit({
+  session: relationRequest.session,
+  message: {
+    id: relationRequest.message.id,
+    result: {
+      parents: [{ threadId: 'parent-thread' }],
+      children: [{ threadId: 'full-agent-thread' }, { threadId: 'child-thread' }],
+    },
+  },
+});
+assert.equal(relatedView.messages.at(-1).value.result.parents[0].threadId, 'parent-thread');
+
+chrome.windows = { update: async () => ({}) };
+const relatedOpened = await call({
+  type: 'openRelatedThread',
+  conversationKey: childTab.id,
+  threadId: 'full-agent-thread',
+});
+assert.equal(relatedOpened.tabId, clone.tabId);
+assert(
+  (await call({ type: 'openRelatedThread', conversationKey: childTab.id, threadId: 'unrelated' }))
+    .error,
+);
+const beforeFocus = tabs.size;
+const pageOpened = await call({
+  type: 'openRelatedThread',
+  conversationKey: childTab.id,
+  threadId: 'child-thread',
+});
+assert.equal(
+  pageOpened.tabId,
+  childTab.id,
+  'Focus the original webpage instead of an Agent mirror',
+);
+assert.equal(tabs.size, beforeFocus, 'Do not create a duplicate tab');
+const restored = await call({
+  type: 'openRelatedThread',
+  conversationKey: childTab.id,
+  threadId: 'parent-thread',
+});
+assert(!restored.error, restored.error);
+const restoredSession = saved.conversations.find(
+  ([, s]) => s.threadId === 'parent-thread' && s.viewOnly,
+)?.[1];
+assert(restoredSession, 'Restore the original thread instead of creating a new one');
+assert.equal(
+  restoredSession.noCompanion,
+  true,
+  'Do not attach unrelated pages to a restored conversation',
+);
+const repeated = await call({
+  type: 'openRelatedThread',
+  conversationKey: childTab.id,
+  threadId: 'parent-thread',
+});
+assert.equal(repeated.tabId, restored.tabId, 'Reuse the restored tab');
 const noOpener = await chrome.tabs.create({ url: 'https://noopener.test/' });
 await chrome.webNavigation.onCreatedNavigationTarget.emit({
   sourceTabId: childTab.id,

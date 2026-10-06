@@ -95,6 +95,15 @@ export function saveScopePreference(scope) {
   state.scope = scope;
 }
 
+export async function openRelatedThread(threadId) {
+  const result = await chrome.runtime.sendMessage({
+    type: 'openRelatedThread',
+    conversationKey: state.conversationKey,
+    threadId,
+  });
+  if (result?.error) throw Error(result.error);
+}
+
 export async function openConversationLink(url, active) {
   const result = await chrome.runtime.sendMessage({
     type: 'openConversationLink',
@@ -123,4 +132,14 @@ export async function openAgentTab() {
     windowId: state.windowId,
   });
   if (result.error) throw Error(result.error);
+}
+
+export async function pageHistory(threadId) {
+  const result = await chrome.runtime.sendMessage({
+    type: threadId ? 'switchHistory' : 'urlHistory',
+    conversationKey: state.conversationKey,
+    threadId,
+  });
+  if (result?.error) throw Error(result.error);
+  return result;
 }

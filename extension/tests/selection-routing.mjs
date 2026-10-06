@@ -16,6 +16,7 @@ globalThis.chrome = {
   },
   scripting: { executeScript: async () => [] },
   storage: {
+    local: { get: async () => ({}), set: async () => {} },
     session: {
       get: async () => ({
         conversations: [['clone', { key: 'clone', id: 'clone', tabId: 1, viewOnly: true }]],

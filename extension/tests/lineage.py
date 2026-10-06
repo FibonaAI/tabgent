@@ -34,8 +34,11 @@ with patch.object(host.Session, 'rpc', fixture_rpc), tempfile.TemporaryDirectory
             session.lineage_completed.clear()
             lineage.flush(session, home)
             assert path.read_text() == before, 'Repeated delivery must not duplicate notes'
+        assert lineage.relatives(child, home)['parents'][0]['threadId'] == parent.thread['id']
+        assert lineage.relatives(parent, home)['children'][0]['threadId'] == child.thread['id']
         child_id = child.thread['id']
         child.close()
+        assert lineage.relatives(parent, home)['children'][0]['threadId'] == child_id
         resumed = host.Session('resumed', {}, child_id)
         resumed.start()
         try:
