@@ -139,6 +139,35 @@ export function saveScopePreference(){}
           await page.locator('#newConversation').isDisabled(),
           'Empty chat cannot create another empty chat',
         );
+        await page.evaluate(async () => {
+          const { pageContextPrefix } = await import('/session-config.js');
+          setupTest.emit('item/completed', {
+            item: {
+              id: 'joined-history-user',
+              type: 'userMessage',
+              content: [
+                {
+                  type: 'text',
+                  text:
+                    pageContextPrefix +
+                    JSON.stringify({
+                      tabId: 1,
+                      url: 'https://example.test',
+                      title: 'A {page} with "quotes"',
+                      nested: { value: '}' },
+                    }) +
+                    'Open the next episode',
+                },
+              ],
+            },
+          });
+        });
+        assert.equal(
+          await page.locator('.message.user').last().innerText(),
+          'Open the next episode',
+        );
+        await page.evaluate(() => document.querySelector('#messages').replaceChildren());
+
         await page.evaluate(() =>
           setupTest.emit('item/completed', {
             item: {
@@ -240,6 +269,38 @@ export function saveScopePreference(){}
           'Current conversation',
         );
         assert.equal(await page.locator('.history-entry small').count(), 2);
+        await page.locator('#historyUrl').click();
+        assert(await page.locator('#historyUrlDetails').isVisible());
+        assert.equal(
+          await page.locator('#historyUrlDetails').innerText(),
+          await page.locator('#historyUrl').innerText(),
+        );
+        assert.equal(
+          await page.locator('#historyUrl').evaluate((el) => getComputedStyle(el).whiteSpace),
+          'nowrap',
+        );
+        const selectedUrl = await page.evaluate(async () => {
+          const popup = document.querySelector('#historyUrlDetails');
+          const textNode = popup.firstChild;
+          const range = document.createRange();
+          range.selectNodeContents(popup);
+          getSelection().removeAllRanges();
+          getSelection().addRange(range);
+          for (let i = 0; i < 3; i++) {
+            setupTest.context({ page: { title: 'Paper', url: 'https://example.test/paper.pdf' } });
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+          }
+          return { text: getSelection().toString(), sameNode: popup.firstChild === textNode };
+        });
+        assert.equal(selectedUrl.text, 'https://example.test/paper.pdf');
+        assert(selectedUrl.sameNode, 'Unchanged URL refreshes preserve the selected text node');
+        await page.locator('#prompt').click();
+        assert(await page.locator('#historyUrlDetails').isHidden());
+        await page.locator('#historyUrl').focus();
+        await page.locator('#historyUrl').press('Enter');
+        assert(await page.locator('#historyUrlDetails').isVisible());
+        await page.keyboard.press('Escape');
+        assert(await page.locator('#historyUrlDetails').isHidden());
         assert(!(await page.locator('.history-entry small').first().innerText()).includes('PM'));
         assert.equal(await page.locator('.history-date').innerText(), 'Earlier');
         await page.locator('#historyPanel').screenshot({ path: '/tmp/bac-history-refined.png' });
@@ -343,7 +404,7 @@ export function saveScopePreference(){}
         await page.locator('.lineage-group > summary').click();
         assert.equal(
           await page.locator('.lineage-group .lineage-link').last().innerText(),
-          'New conversation',
+          'New conversation · hild-789',
         );
         await page.locator('.lineage-group .lineage-link').last().click();
         assert.equal((await page.evaluate(() => setupTest.actions.at(-1))).threadId, 'child-789');
@@ -356,6 +417,28 @@ export function saveScopePreference(){}
             document.querySelector('.lineage-group')?.open &&
             document.querySelector('.lineage-group').textContent.includes('Updated title'),
         );
+        await page.evaluate(() => {
+          setupTest.relations.children.push(
+            {
+              threadId: 'page-fallback',
+              title: 'New chat',
+              pageTitle: 'FCOS paper',
+              url: 'https://arxiv.org/abs/1904.01355',
+              createdAt: 2500,
+            },
+            { threadId: 'url-fallback', url: 'https://example.com/docs', createdAt: 2600 },
+            { threadId: 'unknown-12345678', createdAt: 2700 },
+          );
+          setupTest.emit('bridge/lineageChanged');
+        });
+        await page.waitForFunction(() =>
+          [...document.querySelectorAll('.lineage-link')].some(
+            (node) => node.textContent === 'FCOS paper',
+          ),
+        );
+        const labels = await page.locator('.lineage-link').allTextContents();
+        assert(labels.includes('example.com/docs'));
+        assert(labels.some((label) => label.endsWith('12345678')));
         const noteHidden = await page.evaluate(async () => {
           const { isLineageNote } = await import('/ui/relations.js');
           return isLineageNote({

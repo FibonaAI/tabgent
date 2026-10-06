@@ -84,10 +84,11 @@ async function getSession(tabId) {
   return s;
 }
 async function historyUrl(s) {
-  if (s.noCompanion) return '';
   const tab = await chrome.tabs.get(s.tabId).catch(() => null);
-  if (!tab || tab.incognito) return '';
-  return pdfSource(tab.url) || tab.url || '';
+  if (tab?.incognito) return '';
+  const url = pdfSource(tab?.url) || tab?.url || tab?.pendingUrl;
+  if (url && !url.startsWith(chrome.runtime.getURL('ui/chat.html'))) return url;
+  return '';
 }
 function hasUserInput(thread) {
   return thread?.turns?.some((turn) =>
@@ -126,12 +127,18 @@ async function verifyHistory(session, threadId) {
     });
     return !!hasUserInput(result.thread);
   } catch (e) {
-    if (/no rollout found|thread not found/i.test(e.message)) return false;
+    if (
+      /no rollout found|thread not found|not materialized yet|includeTurns is unavailable before first user message/i.test(
+        e.message,
+      )
+    )
+      return false;
     throw e;
   }
 }
-async function recordHistory(s) {
-  await urlHistory.record(s, await historyUrl(s));
+async function recordHistory(s, url) {
+  const urls = url ? [url] : (await urlHistory.get(s.threadId))?.urls || [];
+  for (const page of urls) await urlHistory.record(s, page);
 }
 // Navigation targets identify webpage links; new-tab and clone actions stay roots.
 async function trackChild(tabId, parent) {
@@ -164,6 +171,7 @@ async function linkChildren() {
       if (!parent || child.linkRecorded || !child.threadId) continue;
       parent.threadId ||= sessions.get(parent.key)?.threadId;
       if (!parent.threadId || parent.threadId === child.threadId) continue;
+      const destination = await chrome.tabs.get(child.tabId).catch(() => ({}));
       await new Promise((resolve, reject) => {
         const id = ++sequence;
         const timer = setTimeout(() => {
@@ -189,7 +197,10 @@ async function linkChildren() {
             params: {
               parentThreadId: parent.threadId,
               childThreadId: child.threadId,
-              source: parent.source,
+              source: {
+                ...parent.source,
+                destination: { title: destination.title || '', url: destination.url || '' },
+              },
             },
           },
         });
@@ -344,11 +355,23 @@ async function receive(message) {
       if (['turn/start', 'thread/queue/start'].includes(r.method) && m.error) s.turnPending = false;
       if (
         !m.error &&
-        (['turn/start', 'thread/queue/start', 'turn/steer'].includes(r.method) ||
+        (['turn/start', 'thread/queue/start', 'turn/steer', 'thread/queue/add'].includes(
+          r.method,
+        ) ||
           hasUserInput(m.result?.thread))
       ) {
         s.hasUserInput = true;
-        await recordHistory({ ...s, tabId: r.tabId ?? s.tabId });
+        await recordHistory(s, r.pageUrl);
+        for (const turn of m.result?.thread?.turns || [])
+          for (const item of turn.items || [])
+            if (item.type === 'userMessage')
+              for (const part of item.content || [])
+                if (part.text?.startsWith(pageContextPrefix)) {
+                  try {
+                    const page = JSON.parse(part.text.slice(pageContextPrefix.length));
+                    if (typeof page.url === 'string') await recordHistory(s, page.url);
+                  } catch {}
+                }
         await persist();
         for (const port of s.ports) event(port, 'codex-history-changed');
       }
@@ -356,10 +379,15 @@ async function receive(message) {
         const entries = [...(m.result.parents || []), ...(m.result.children || [])];
         s.relatedThreads = entries.map((entry) => entry.threadId);
         await persist();
-        for (const entry of entries)
-          entry.title =
-            [...sessions.values()].find((owner) => owner.threadId === entry.threadId)?.title ||
-            entry.title;
+        await Promise.all(
+          entries.map(async (entry) => {
+            const owner = [...sessions.values()].find((value) => value.threadId === entry.threadId);
+            const page = owner && (await chrome.tabs.get(owner.tabId).catch(() => null));
+            entry.title = owner?.title || entry.title;
+            entry.pageTitle = page?.title || entry.pageTitle;
+            entry.url = page?.url || entry.url;
+          }),
+        );
       }
       event(r.port, 'codex-message', { ...m, id: r.id });
     }
@@ -486,7 +514,7 @@ chrome.runtime.onConnect.addListener((port) => {
       }
       if (msg.name === 'codexRpc') {
         const m = { ...arg, params: { ...arg.params } };
-        let messageTabId;
+        let messageTabId, messagePageUrl;
         if (['turn/start', 'turn/steer', 'thread/queue/add'].includes(m.method)) {
           const input = [...(m.params.input || [])];
           let page = input.find((p) => p.type === 'text' && p.text?.startsWith(pageContextPrefix));
@@ -505,6 +533,10 @@ chrome.runtime.onConnect.addListener((port) => {
             };
             input.unshift(page);
           }
+          const messagePage = JSON.parse(page.text.slice(pageContextPrefix.length));
+          messagePageUrl = messagePage.url;
+          s.pageUrls ||= {};
+          if (messagePageUrl) s.pageUrls[messagePage.tabId] = messagePageUrl;
           m.params.input = input;
           if (m.method !== 'thread/queue/add')
             messageTabId = JSON.parse(page.text.slice(pageContextPrefix.length)).tabId;
@@ -538,6 +570,7 @@ chrome.runtime.onConnect.addListener((port) => {
             method: m.method,
             tabId: port.companionTabId,
             toolTabId: messageTabId,
+            pageUrl: messagePageUrl,
           });
           m.id = id;
         }
@@ -707,14 +740,41 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       await loaded;
       const source = sessions.get(msg.conversationKey);
       if (!source) throw Error('Conversation not found');
-      await Promise.all([...sessions.values()].filter((s) => !s.closedTab).map(recordHistory));
+      await Promise.all(
+        [...sessions.values()].filter((s) => !s.closedTab).map((session) => recordHistory(session)),
+      );
       const viewTabId = sender.tab
         ? (agentCompanions.get(sender.tab.id) ?? source.tabId)
         : (msg.companionTabId ?? source.tabId);
+      if (source.threadId && !source.hasUserInput) {
+        source.hasUserInput = await verifyHistory(source, source.threadId);
+        await persist();
+      }
       const viewSource = { ...source, tabId: viewTabId };
       await recordHistory(viewSource);
-      const url = await historyUrl(viewSource);
-      const entries = await urlHistory.list(url, (threadId) => verifyHistory(source, threadId));
+      const liveUrl = await historyUrl(viewSource);
+      source.pageUrls ||= {};
+      if (liveUrl) source.pageUrls[viewTabId] = liveUrl;
+      const url = liveUrl || source.pageUrls[viewTabId] || '';
+      await persist();
+      const entries = url
+        ? await urlHistory.list(url, (threadId) => verifyHistory(source, threadId))
+        : [];
+      if (
+        source.threadId &&
+        source.hasUserInput &&
+        !entries.some((entry) => entry.threadId === source.threadId)
+      ) {
+        const current = await urlHistory.get(source.threadId);
+        entries.unshift({
+          ...current,
+          threadId: source.threadId,
+          title: source.title || current?.title || '',
+          updatedAt: current?.updatedAt || Date.now(),
+          settings: source.settings,
+          scope: source.scope,
+        });
+      }
       if (msg.type === 'urlHistory') return { url, entries, current: source.threadId };
       const entry = entries.find((item) => item.threadId === msg.threadId);
       if (!entry) throw Error('Conversation does not belong to this URL');
@@ -846,6 +906,18 @@ chrome.tabs.onRemoved.addListener(async (id) => {
     if (s.tabId !== id && !(s.viewOnly && !remaining)) continue;
     if (remaining) s.tabId = remaining[0];
     else {
+      if (!s.hasUserInput && !s.turnPending) {
+        connect().postMessage({
+          op: 'close',
+          session: s.id,
+          discardEmpty: true,
+          threadId: s.threadId,
+        });
+        closedViews.delete(s.threadId);
+        for (const child of sessions.values()) if (child.parent?.key === key) delete child.parent;
+        sessions.delete(key);
+        continue;
+      }
       if (s.threadId)
         closedViews.set(s.threadId, {
           tabId: s.noCompanion ? null : s.tabId,
@@ -871,8 +943,17 @@ chrome.tabs.onRemoved.addListener(async (id) => {
 chrome.webNavigation.onCommitted.addListener(async (detail) => {
   await loaded;
   for (const s of sessions.values()) {
-    if (s.tabId !== detail.tabId) continue;
-    if (detail.frameId === 0) void recordHistory(s).catch(console.warn);
+    if (
+      s.tabId !== detail.tabId &&
+      ![...s.ports].some((port) => port.companionTabId === detail.tabId)
+    )
+      continue;
+    if (detail.frameId === 0 && detail.url) {
+      s.pageUrls ||= {};
+      s.pageUrls[detail.tabId] = pdfSource(detail.url) || detail.url;
+      await persist();
+    }
+
     if (s.selection && (detail.frameId === 0 || s.selection.frameId === detail.frameId)) {
       s.selection = null;
       await persist();

@@ -22,6 +22,20 @@ const native = {
   onDisconnect: event(),
   postMessage(message) {
     sent.push(message);
+    if (message.message?.method === 'thread/read') {
+      queueMicrotask(() =>
+        native.onMessage.emit({
+          session: message.session,
+          message: {
+            id: message.message.id,
+            error: {
+              message:
+                'thread test is not materialized yet; includeTurns is unavailable before first user message',
+            },
+          },
+        }),
+      );
+    }
     if (message.message?.method === 'bridge/thread/link') {
       linkCalls.push(message.message.params);
       queueMicrotask(() =>
@@ -227,7 +241,11 @@ async function submitMessage(view, sessionId) {
     message: { id: request.message.id, result: { turnId: 'test' } },
   });
 }
-assert.equal((await call({ type: 'urlHistory', conversationKey: 1 })).entries.length, 0);
+assert.equal(
+  (await call({ type: 'urlHistory', conversationKey: 1 })).entries.length,
+  0,
+  'Empty current conversation is hidden',
+);
 await submitMessage(sidebar, session.id);
 await submitMessage(
   freshView,
@@ -235,6 +253,62 @@ await submitMessage(
 );
 const historyList = await call({ type: 'urlHistory', conversationKey: 1 });
 assert.equal(historyList.entries.length, 2, 'Both chats belong to the same URL');
+const originalUrl = tabs.get(1).url;
+tabs.get(1).url = 'https://example.test/second';
+await chrome.webNavigation.onCommitted.emit({ tabId: 1, frameId: 0 });
+assert.equal(
+  (await call({ type: 'urlHistory', conversationKey: 1 })).entries.length,
+  1,
+  'The current conversation stays visible before sending on the new URL',
+);
+assert(
+  !local.urlHistory['thread-one'].urls.includes('https://example.test/second'),
+  'Showing the current conversation does not create an association',
+);
+await submitMessage(sidebar, session.id);
+assert.equal(
+  (await call({ type: 'urlHistory', conversationKey: 1 })).entries[0].threadId,
+  'thread-one',
+);
+assert(
+  local.urlHistory['thread-one'].urls.includes(originalUrl),
+  'Sending on another page preserves the previous association',
+);
+tabs.get(1).url = 'https://example.test/third';
+await sidebar.send({
+  type: 'ui',
+  name: 'codexRpc',
+  args: [
+    { id: 879, method: 'turn/steer', params: { input: [{ type: 'text', text: 'Another page' }] } },
+  ],
+});
+const pendingHistoryRequest = sent.at(-1);
+tabs.get(1).url = 'https://example.test/fourth';
+await native.onMessage.emit({
+  session: session.id,
+  message: { id: pendingHistoryRequest.message.id, result: { turnId: 'test' } },
+});
+await new Promise((resolve) => setTimeout(resolve, 0));
+assert(local.urlHistory['thread-one'].urls.includes('https://example.test/third'));
+assert(
+  !local.urlHistory['thread-one'].urls.includes('https://example.test/fourth'),
+  'Use the message URL, not the page at response time',
+);
+
+delete tabs.get(1).url;
+const missingUrlHistory = await call({ type: 'urlHistory', conversationKey: 1 });
+assert.equal(
+  missingUrlHistory.url,
+  'https://example.test/third',
+  'Keep the last known address for this view',
+);
+assert.deepEqual(
+  missingUrlHistory.entries.map((entry) => entry.threadId),
+  ['thread-one'],
+  'A closed page does not expand to other conversations sharing its URLs',
+);
+tabs.get(1).url = originalUrl;
+
 assert(
   !(await call({ type: 'switchHistory', conversationKey: 1, threadId: 'fresh-thread' })).error,
 );
@@ -382,11 +456,20 @@ await rootView.send({ type: 'bind', threadId: 'new-root-thread' });
 assert.equal(saved.conversations.find(([key]) => key === rootTab.id)[1].parent, undefined);
 assert.equal(linkCalls.length, 0);
 
+// Unused roots are discarded once their last tab closes.
+const emptyId = saved.conversations.find(([key]) => key === rootTab.id)[1].id;
+tabs.delete(rootTab.id);
+await chrome.tabs.onRemoved.emit(rootTab.id);
+assert(sent.some((m) => m.session === emptyId && m.discardEmpty));
+assert(!saved.conversations.some(([key]) => key === rootTab.id));
+assert(!saved.closedViews.some(([id]) => id === 'new-root-thread'));
+
 // Browser links and explicit conversation links retain their actual parent.
 linkCalls.length = 0;
 const origin = await chrome.tabs.create({ url: 'https://parent.test/' });
 const originView = await attach(origin.id);
 await originView.send({ type: 'bind', threadId: 'parent-thread' });
+await submitMessage(originView, saved.conversations.find(([key]) => key === origin.id)[1].id);
 const childTab = await chrome.tabs.create({ url: 'https://child.test/', openerTabId: origin.id });
 await chrome.tabs.onCreated.emit(childTab);
 for (let i = 0; i < 2; i++)
@@ -485,6 +568,7 @@ await native.onMessage.emit({
     },
   },
 });
+await new Promise((resolve) => setTimeout(resolve, 0));
 assert.equal(relatedView.messages.at(-1).value.result.parents[0].threadId, 'parent-thread');
 
 chrome.windows = { update: async () => ({}) };

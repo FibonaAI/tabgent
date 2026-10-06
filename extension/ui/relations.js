@@ -107,10 +107,21 @@ export function createRelations({ rpc, i18n, open, error, ready }) {
             document.createTextNode(i18n(kind === 'parent' ? 'lineageFrom' : 'lineageTo') + ' '),
           );
           const link = document.createElement('button');
+          const untitled = [i18n('newChat'), i18n('lineageUntitled')];
+          let pageLabel = '';
+          try {
+            const url = new URL(entry.url);
+            if (['http:', 'https:', 'file:'].includes(url.protocol))
+              pageLabel = url.hostname + (url.pathname === '/' ? '' : url.pathname);
+          } catch {}
           link.textContent =
-            entry.title && entry.title !== i18n('newChat') ? entry.title : i18n('lineageUntitled');
+            [entry.title, entry.pageTitle, pageLabel].find(
+              (value) => value && !untitled.includes(value),
+            ) || `${i18n('lineageUntitled')} · ${entry.threadId.slice(-8)}`;
           link.className = 'lineage-link';
-          link.title = i18n('relatedOpen');
+          link.title = [link.textContent, entry.url, i18n('relatedOpen')]
+            .filter(Boolean)
+            .join('\n');
           link.onclick = () => open(entry.threadId).catch((e) => error(e.message));
           text.append(link, document.createTextNode('.'));
           const details = document.createElement('details');

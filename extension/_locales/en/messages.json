@@ -765,5 +765,8 @@
   },
   "linkOpenNew": {
     "message": "Open in a new tab"
+  },
+  "historyUnavailable": {
+    "message": "Couldn't load conversations. Close this list and try again."
   }
 }

@@ -158,3 +158,5 @@ marker into a localized hover hint and click intent. Missing or unknown markers
 open a new tab. Modified clicks always request a new tab. Current-tab navigation
 uses the clicking view's companion page, preserves the Agent view, and does not
 create lineage. Browser tool navigation remains an explicit navigate/open choice.
+
+Page history associates a thread with every URL on which the user submits a message. The URL is captured in that message’s browser context before the request, so later navigation cannot move the association. Navigation alone does not add an entry. The drawer shows conversations associated with the current tab URL plus the current conversation if it has user messages, deduplicated by thread ID. Including the current conversation does not persist a URL association. If the tab closes, the view keeps its last known page address.

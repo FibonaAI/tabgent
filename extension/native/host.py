@@ -543,8 +543,23 @@ def handle(message):
             session.emit({"method": "bridge/authChanged"})
     elif op in ("close", "restart"):
         session = SESSIONS.pop(ident, None)
+        resume_for_cleanup = not session and message.get("discardEmpty") and message.get("threadId")
+        if resume_for_cleanup:
+            session = Session(ident, CONFIG or {}, message["threadId"])
         if session:
-            POOL.submit(session.close)
+            def close_session(session=session):
+                try:
+                    if resume_for_cleanup:
+                        session.start()
+                    if message.get("discardEmpty"):
+                        lineage.discard_empty(session, HOME)
+                        for other in list(SESSIONS.values()):
+                            other.emit({"method": "bridge/lineageChanged"})
+                except Exception as error:
+                    print(f"Could not discard empty conversation: {error}", file=sys.stderr)
+                finally:
+                    session.close()
+            POOL.submit(close_session)
         if op == "restart":
             session = Session(ident, CONFIG or {}, message.get("threadId"))
             SESSIONS[ident] = session

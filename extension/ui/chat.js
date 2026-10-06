@@ -1,3 +1,4 @@
+import { normalizeUserInput } from './user-input.js';
 import { createComposerSettings } from './composer-settings.js';
 import { createRelations, isLineageNote } from './relations.js';
 import { createFollowups, selectionContextPrefix } from './followups.js';
@@ -287,6 +288,21 @@ const composerSettings = createComposerSettings({
   thread: () => threadId,
   ready: () => ready,
 });
+function positionHistoryUrlDetails() {
+  const rect = $('historyUrl').getBoundingClientRect();
+  const popup = $('historyUrlDetails');
+  const width = Math.min(340, innerWidth - 24);
+  popup.style.width = width + 'px';
+  popup.style.left = Math.max(12, Math.min(rect.left, innerWidth - width - 12)) + 'px';
+  popup.style.top = rect.bottom + 8 + 'px';
+  popup.style.maxHeight = Math.max(60, innerHeight - rect.bottom - 20) + 'px';
+}
+$('historyUrlDetails').addEventListener('beforetoggle', (event) => {
+  if (event.newState === 'open') positionHistoryUrlDetails();
+});
+window.addEventListener('resize', () => {
+  if ($('historyUrlDetails').matches(':popover-open')) positionHistoryUrlDetails();
+});
 let historyRevision = 0;
 async function refreshHistory() {
   if ($('historyPanel').hidden) return;
@@ -294,10 +310,13 @@ async function refreshHistory() {
   try {
     const result = await pageHistory();
     if (revision !== historyRevision) return;
-    $('historyUrl').textContent = result.url
-      ? new URL(result.url).hostname || i18n('historyThisPage')
-      : i18n('historyThisPage');
-    $('historyUrl').title = result.url;
+    for (const [id, text] of [
+      ['historyUrl', result.url || i18n('historyThisPage')],
+      ['historyUrlDetails', result.url || ''],
+    ]) {
+      if ($(id).textContent !== text) $(id).textContent = text;
+    }
+    $('historyUrl').disabled = !result.url;
     $('historyList').replaceChildren();
     let lastGroup;
     const today = new Date();
@@ -358,10 +377,12 @@ async function refreshHistory() {
     }
     if (!result.entries.length) $('historyList').textContent = i18n('historyEmpty');
   } catch (e) {
-    $('historyList').textContent = e.message;
+    console.warn('Could not load page conversations', e);
+    $('historyList').textContent = i18n('historyUnavailable');
   }
 }
 function toggleHistory(open) {
+  if (!open) $('historyUrlDetails').hidePopover();
   $('historyPanel').hidden = !open;
   $('historyToggle').setAttribute('aria-expanded', String(open));
   document.body.classList.toggle('history-open', open);
@@ -611,6 +632,7 @@ function renderItem(item, completed = true, timestamp = Date.now()) {
   if (item.type === 'userMessage') {
     el.className = 'message user';
     renderUserInput(el, item.content || []);
+    el.hidden = !el.childElementCount;
   } else if (item.type === 'agentMessage' || item.type === 'plan') {
     record.text = item.text ?? record.text;
     record.phase = item.phase ?? record.phase;
@@ -1060,7 +1082,7 @@ const followups = createFollowups({
       files = [];
     let selection = null;
     const text = [];
-    for (const part of entry.input) {
+    for (const part of normalizeUserInput(entry.input)) {
       if (part.type === 'text' && part.text.startsWith(pageContextPrefix)) continue;
       if (part.type === 'text' && part.text.startsWith(selectionContextPrefix)) {
         selection = JSON.parse(part.text.slice(selectionContextPrefix.length));
@@ -1444,9 +1466,13 @@ addWebUiListener('codex-context', (value) => {
   context = value;
   void refreshHistory();
   $('context').hidden = !value.page;
-  $('contextText').textContent = value.page ? value.page.title || value.page.url : '';
-  $('contextFullTitle').textContent = value.page?.title || '';
-  $('contextFullUrl').textContent = value.page?.url || '';
+  for (const [id, text] of [
+    ['contextText', value.page ? value.page.title || value.page.url : ''],
+    ['contextFullTitle', value.page?.title || ''],
+    ['contextFullUrl', value.page?.url || ''],
+  ]) {
+    if ($(id).textContent !== text) $(id).textContent = text;
+  }
   if (!value.page) $('contextDetails').hidePopover();
 });
 $('setupPrimary').onclick = () => {
@@ -1644,6 +1670,7 @@ new ResizeObserver((entries) => {
 setInterval(refreshVisibleContext, 2000);
 
 function renderUserInput(el, input) {
+  input = normalizeUserInput(input);
   el.replaceChildren();
   const quotes = input.filter(
     (c) => c.type === 'text' && c.text.startsWith(i18n('selectionQuote') + '\n'),
@@ -1660,12 +1687,7 @@ function renderUserInput(el, input) {
     node('div', lines.join('\n').replace(/^\n/, ''), quote);
   }
   for (const c of input) {
-    if (
-      quotes.includes(c) ||
-      (c.type === 'text' &&
-        (c.text.startsWith(selectionContextPrefix) || c.text.startsWith(pageContextPrefix)))
-    )
-      continue;
+    if (quotes.includes(c) || c.browserContext) continue;
     if (c.type === 'text') node('div', c.text, el);
     else if (
       c.type === 'image' &&

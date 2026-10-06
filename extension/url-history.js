@@ -6,6 +6,10 @@ export function createUrlHistory(storage) {
     entries = data.urlHistory || {};
   });
   return {
+    async get(threadId) {
+      await loaded;
+      return entries[threadId];
+    },
     async record(session, url) {
       await loaded;
       if (!session.threadId || !url) return;
@@ -34,10 +38,10 @@ export function createUrlHistory(storage) {
     },
     async list(url, verify) {
       await loaded;
+      const urls = Array.isArray(url) ? url : [url];
+      const matches = (entry) => entry.urls.some((page) => urls.includes(page));
       if (verify) {
-        for (const entry of Object.values(entries).filter(
-          (e) => e.urls.includes(url) && !e.hasUserInput,
-        )) {
+        for (const entry of Object.values(entries).filter((e) => matches(e) && !e.hasUserInput)) {
           try {
             const hasInput = await verify(entry.threadId);
             if (hasInput) entry.hasUserInput = true;
@@ -52,7 +56,7 @@ export function createUrlHistory(storage) {
         await writes;
       }
       return Object.values(entries)
-        .filter((entry) => entry.hasUserInput && entry.urls.includes(url))
+        .filter((entry) => entry.hasUserInput && matches(entry))
         .sort((a, b) => b.updatedAt - a.updatedAt);
     },
   };

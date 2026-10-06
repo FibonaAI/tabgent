@@ -36,6 +36,11 @@ with patch.object(host.Session, 'rpc', fixture_rpc), tempfile.TemporaryDirectory
             assert path.read_text() == before, 'Repeated delivery must not duplicate notes'
         assert lineage.relatives(child, home)['parents'][0]['threadId'] == parent.thread['id']
         assert lineage.relatives(parent, home)['children'][0]['threadId'] == child.thread['id']
+        parent.rpc('thread/inject_items', {'threadId': parent.thread['id'], 'items': [{
+            'type': 'message', 'role': 'user', 'content': [{'type': 'input_text', 'text': 'Keep this conversation'}],
+        }]})
+        lineage.discard_empty(parent, home)
+        assert lineage.relatives(child, home)['parents'], 'Real user messages protect a conversation from cleanup'
         child_id = child.thread['id']
         child.close()
         assert lineage.relatives(parent, home)['children'][0]['threadId'] == child_id
@@ -47,6 +52,16 @@ with patch.object(host.Session, 'rpc', fixture_rpc), tempfile.TemporaryDirectory
             assert history['thread']['id'] == child_id
         finally:
             resumed.close()
+        cleanup = host.Session('cleanup', {}, child_id)
+        cleanup.start()
+        try:
+            lineage.discard_empty(cleanup, home)
+            assert not lineage.relatives(parent, home)['children']
+            lineage.record(home, parent.thread['id'], child_id, {})
+            assert not lineage.relatives(parent, home)['children'], 'Late events must not recreate discarded branches'
+            assert (home / 'projects/browser-agent-connector/lineage' / f'{child_id}.discarded').exists()
+        finally:
+            cleanup.close()
         print('PASS durable reciprocal lineage / no generated turns / idempotent delivery / history readable after close')
     finally:
         parent.close()

@@ -961,7 +961,8 @@ select option {
 .settings #context:focus-visible {
   box-shadow: inset 0 0 0 1px var(--border);
 }
-#contextDetails {
+#contextDetails,
+#historyUrlDetails {
   position: fixed;
   inset: auto;
   margin: 0;
@@ -976,6 +977,9 @@ select option {
   white-space: normal;
   font-size: 12px;
   line-height: 1.5;
+}
+#historyUrlDetails {
+  user-select: text;
 }
 #contextFullTitle {
   font-weight: 500;
@@ -1489,12 +1493,26 @@ select option {
   height: 18px;
 }
 #historyUrl {
+  display: block;
+  width: calc(100% - 16px);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+  user-select: text;
   color: var(--muted);
   font-size: 11px;
   margin: -4px 8px 20px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+#historyUrl:focus-visible {
+  outline: 2px solid var(--muted);
+  outline-offset: 4px;
+  border-radius: 3px;
 }
 .history-date {
   color: var(--muted);

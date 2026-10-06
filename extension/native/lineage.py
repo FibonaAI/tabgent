@@ -16,6 +16,8 @@ def record(home, parent, child, source):
     root.mkdir(parents=True, exist_ok=True)
     path = root / f'{parent}_{child}.json'
     with LOCK:
+        if any((root / f'{ident}.discarded').exists() for ident in (parent, child)):
+            return
         if not path.exists():
             value = {'parent': parent, 'child': child, 'source': source}
             temporary = path.with_suffix('.tmp')
@@ -77,7 +79,11 @@ def relatives(session, home):
             link = json.loads(path.read_text())
             kind = 'children' if link['parent'] == ident else 'parents'
             thread_id = link['child'] if kind == 'children' else link['parent']
-            result[kind].append({'threadId': thread_id, 'createdAt': path.stat().st_mtime * 1000})
+            page = link.get('source', {})
+            if kind == 'children':
+                page = page.get('destination', {})
+            result[kind].append({'threadId': thread_id, 'createdAt': path.stat().st_mtime * 1000,
+                                 'pageTitle': page.get('title', ''), 'url': page.get('url', '')})
     for entry in [*result['parents'], *result['children']]:
         try:
             thread = session.rpc('thread/read', {'threadId': entry['threadId']})['thread']
@@ -85,3 +91,42 @@ def relatives(session, home):
         except Exception:
             entry['title'] = ''
     return result
+
+
+def discard_empty(session, home):
+    """Archive unused chats and remove their visible relationships, including late links."""
+    if not session.thread:
+        return
+    ident = str(uuid.UUID(session.thread['id']))
+    try:
+        thread = session.rpc('thread/read', {'threadId': ident, 'includeTurns': True})['thread']
+    except Exception as error:
+        if 'no rollout found' not in str(error).lower():
+            raise
+        thread = {}
+    for turn in thread.get('turns', []):
+        for item in turn.get('items', []):
+            if item.get('type') == 'userMessage':
+                text = ''.join(part.get('text', '') for part in item.get('content', []))
+                if not text.startswith('Browser conversation lineage (context only; no reply required).\n'):
+                    return
+    # Injected messages can be absent from the turns projection; verify the rollout too.
+    if thread.get('path'):
+        for line in Path(thread['path']).read_text().splitlines():
+            record = json.loads(line)
+            message = record.get('payload', {})
+            if record.get('type') == 'response_item' and message.get('role') == 'user':
+                kinds = message.get('internal_chat_message_metadata_passthrough', {}).get('content_item_kinds', [])
+                if kinds and all(kind == 'environments.environment_context' for kind in kinds):
+                    continue
+                text = ''.join(part.get('text', '') for part in message.get('content', []))
+                if not text.startswith('Browser conversation lineage (context only; no reply required).\n'):
+                    return
+    root = home / 'projects/browser-agent-connector/lineage'
+    with LOCK:
+        root.mkdir(parents=True, exist_ok=True)
+        (root / f'{ident}.discarded').touch(mode=0o600)
+        for path in [*root.glob(f'{ident}_*.json'), *root.glob(f'*_{ident}.json')]:
+            path.unlink()
+    if thread.get('path'):
+        session.rpc('thread/archive', {'threadId': ident})
