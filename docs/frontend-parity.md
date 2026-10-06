@@ -15,15 +15,18 @@ commit `823ea830c0fd418b09ff02d36cad9a1fff66465b`.
 - `/model`, `/plan`, `/new`, `/rename`, `/compact`, `/status`, `/permissions`,
   `/copy` and `/export` act on the current conversation. Plan mode is shared
   across its views and inherited by new conversations.
-- During a running turn, Enter / Send now uses `turn/steer`; Tab / Queue message
-  uses the app-server's durable `thread/queue/add`. Queued messages are expandable,
-  editable and removable, and refresh across views on `thread/queue/changed`.
-  Codex dispatches them after the running turn. Escape / Stop pauses an active goal
-  and interrupts the current turn; the queue remains available to resume explicitly.
-  Shift + Enter inserts a newline. IME composition never sends or stops a turn.
+- Running-turn follow-ups follow the desktop queued-message strip: Enter queues
+  by default; the row's Steer action submits without interrupting the active run.
+  Delete removes the message, and the actions menu edits it in the original
+  composer or toggles queueing. There is no separate Queue button or edit dialog.
+  Stop interrupts immediately; Escape asks for a second press within two seconds.
+  A paused queue exposes Resume. Cmd/Ctrl + Enter inverts the current follow-up
+  mode. Shift + Enter inserts a newline. Tab keeps its normal focus behavior. IME composition never submits.
+  Reference: the installed desktop's queued-message-list and follow-up preference
+  behavior, together with the user-provided composer screenshot.
 - Sending and pending delivery states are reconciled using server `clientId`,
   including multiple steers. Failed submissions restore the draft; interrupted,
-  unacknowledged steers retain their exact payload behind Send again. Attachments,
+  unacknowledged steers retain their exact payload behind Retry. Attachments,
   skills and selection anchors travel with queued follow-ups; because the queue
   API accepts only UserInput, anchors use a separate explicitly untrusted text
   block instead of turn/start's `additionalContext` field. The frontend hides this

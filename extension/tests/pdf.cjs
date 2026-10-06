@@ -10,7 +10,13 @@ const { chromium } = require('playwright');
   fs.mkdirSync(ext);
   for (const name of ['pdf', 'vendor', '_locales'])
     fs.cpSync('extension/' + name, ext + '/' + name, { recursive: true });
-  for (const name of ['pdf-routing.js', 'browser-tools.js', 'browser-input.js', 'i18n.js'])
+  for (const name of [
+    'pdf-routing.js',
+    'browser-tools.js',
+    'browser-input.js',
+    'agent-pointer.js',
+    'i18n.js',
+  ])
     fs.copyFileSync('extension/' + name, ext + '/' + name);
   const manifest = JSON.parse(fs.readFileSync('extension/manifest.json'));
   delete manifest.action;
@@ -90,6 +96,10 @@ chrome.runtime.onMessage.addListener((m,s,reply)=>{
     assert(shot.data, JSON.stringify(shot));
     assert((await run({ action: 'scroll', pixels: 10 })).success);
     assert((await run({ action: 'scroll', pixels: -10 })).success);
+    assert(
+      await page.evaluate(() => !!globalThis.__bacAgentPointer?.host.isConnected),
+      'PDF.js shows the Agent pointer',
+    );
     // Real text-layer selection, not a fabricated message.
     await viewer
       .locator('.textLayer span')

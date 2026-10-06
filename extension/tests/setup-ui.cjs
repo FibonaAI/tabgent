@@ -200,11 +200,21 @@ export function saveScopePreference(){}
         });
         assert(await page.locator('.worklog').isVisible());
         assert((await page.locator('.worklog').innerText()).includes('Checking the page'));
+        // Desktop defaults to queueing; Steer belongs to the queued-message strip.
         await page.locator('#prompt').fill('Focus on the introduction');
         await page.keyboard.press('Enter');
+        await page.locator('.followup-text').waitFor();
+        assert.equal(
+          await page.evaluate(
+            () => setupTest.requests.filter((r) => r.method === 'turn/steer').length,
+          ),
+          0,
+        );
+        assert.equal(await page.locator('#queue, #queueEditor').count(), 0);
+        assert(await page.locator('#stop').isVisible());
+        await page.getByRole('button', { name: 'Steer', exact: true }).click();
         await page.waitForFunction(() => setupTest.requests.some((r) => r.method === 'turn/steer'));
-        await page.waitForFunction(() => document.querySelector('#prompt').value === '');
-        // The same server client ID reconciles an accepted steer without a duplicate bubble.
+        await page.waitForFunction(() => document.querySelector('#followups').hidden);
         await page.evaluate(() => {
           const m = setupTest.requests.findLast((r) => r.method === 'turn/steer');
           setupTest.emit('item/started', {
@@ -224,27 +234,25 @@ export function saveScopePreference(){}
             .count(),
           1,
         );
-        assert.equal(
-          await page
-            .locator('.message.user')
-            .filter({ hasText: 'Focus on the introduction' })
-            .locator('.delivery-status')
-            .count(),
-          0,
-        );
-        // A rejected steer restores the draft; it never starts a surprise turn.
+        await page.locator('#prompt').fill('Keep this on failure');
+        await page.keyboard.press('Enter');
+        await page.getByRole('button', { name: 'Steer', exact: true }).waitFor();
         await page.evaluate(() => {
           setupTest.failMethod = 'turn/steer';
         });
-        await page.locator('#prompt').fill('Keep this on failure');
-        await page.locator('#send').click();
+        await page.getByRole('button', { name: 'Steer', exact: true }).click();
         await page.waitForFunction(
-          () => document.querySelector('#prompt').value === 'Keep this on failure',
+          () => document.querySelector('.error')?.textContent === 'Test action failure',
+        );
+        await page.waitForFunction(
+          () => document.querySelector('.followup-text')?.textContent === 'Keep this on failure',
         );
         await page.evaluate(() => {
           setupTest.failMethod = null;
         });
-        // Queue keeps selection anchors and attachments, and does not render a sent message.
+        await page.getByRole('button', { name: 'Delete queued message', exact: true }).click();
+        await page.waitForFunction(() => document.querySelector('#followups').hidden);
+        // Edit returns to the original composer, retaining attachments and selection anchors.
         await page.evaluate(() =>
           setupTest.select({
             id: 'queue-selection',
@@ -260,63 +268,86 @@ export function saveScopePreference(){}
           mimeType: 'text/plain',
           buffer: Buffer.from('reference'),
         });
-        await page.waitForFunction(() => !document.querySelector('#send').disabled);
         await page.locator('#prompt').fill('Read the selected paragraph next');
-        await page.keyboard.press('Tab');
-        await page.locator('#followups summary').waitFor();
-        const queued = await page.evaluate(
-          () => setupTest.requests.findLast((r) => r.method === 'thread/queue/add').params,
+        await page.locator('#send').click();
+        await page.locator('.followup-text').waitFor();
+        await page.getByRole('button', { name: 'Queued message actions', exact: true }).click();
+        await page.getByRole('button', { name: 'Edit message', exact: true }).click();
+        await page.waitForFunction(
+          () => document.querySelector('#prompt').value === 'Read the selected paragraph next',
         );
-        assert(queued.input.some((p) => p.type === 'mention' && p.name === 'notes.txt'));
-        assert(queued.input.some((p) => p.text?.includes('main > p:nth-child(2)')));
-        assert.equal(
-          await page
-            .locator('.message.user')
-            .filter({ hasText: 'Read the selected paragraph next' })
-            .count(),
-          0,
-        );
-        assert.equal(await page.locator('#prompt').inputValue(), '');
-        await page.getByRole('button', { name: 'Edit queued message', exact: true }).click();
-        await page.locator('#queueEditor textarea').fill('Compare that paragraph next');
-        await page
-          .locator('#queueEditor')
-          .getByRole('button', { name: 'Save', exact: true })
-          .click();
-        await page.waitForFunction(() =>
-          document
-            .querySelector('#followups summary')
-            .textContent.includes('Compare that paragraph next'),
+        assert(await page.locator('#selection').isVisible());
+        assert((await page.locator('#attachments').innerText()).includes('notes.txt'));
+        await page.locator('#prompt').fill('Compare that paragraph next');
+        await page.locator('#prompt').press('Enter');
+        await page.waitForFunction(
+          () =>
+            document.querySelector('.followup-text')?.textContent === 'Compare that paragraph next',
         );
         const edited = await page.evaluate(
-          () => setupTest.requests.findLast((r) => r.method === 'thread/queue/update').params.input,
+          () => setupTest.requests.findLast((r) => r.method === 'thread/queue/add').params.input,
         );
         assert(edited.some((p) => p.text?.includes('main > p:nth-child(2)')));
-        assert(edited.some((p) => p.type === 'mention'));
-        // An accepted steer not yet consumed remains recoverable after interruption.
-        await page.locator('#prompt').fill('A pending steer');
-        await page.locator('#send').click();
+        assert(edited.some((p) => p.type === 'mention' && p.name === 'notes.txt'));
+        await page.getByRole('button', { name: 'Queued message actions', exact: true }).click();
+        await page.getByRole('button', { name: 'Turn off queueing', exact: true }).click();
+        await page.locator('#prompt').fill('Direct steer');
+        await page.locator('#prompt').press('Enter');
         await page.waitForFunction(() =>
           setupTest.requests.some(
             (r) =>
-              r.method === 'turn/steer' && r.params.input.some((p) => p.text === 'A pending steer'),
+              r.method === 'turn/steer' && r.params.input.some((p) => p.text === 'Direct steer'),
           ),
         );
-        // Stop remains available with a draft. IME Escape does not interrupt.
-        await page.locator('#prompt').fill('A draft that survives stopping');
+        await page.evaluate(() => {
+          const m = setupTest.requests.findLast((r) => r.method === 'turn/steer');
+          setupTest.emit('item/started', {
+            threadId: 'test-thread',
+            item: {
+              id: 'direct-steer',
+              clientId: m.params.clientUserMessageId,
+              type: 'userMessage',
+              content: m.params.input,
+            },
+          });
+        });
+        await page.getByRole('button', { name: 'Queued message actions', exact: true }).click();
+        await page.getByRole('button', { name: 'Turn on queueing', exact: true }).click();
+        await page.locator('#prompt').fill('Shortcut steer');
+        await page.locator('#prompt').press('Control+Enter');
+        await page.waitForFunction(() =>
+          setupTest.requests.some(
+            (r) =>
+              r.method === 'turn/steer' && r.params.input.some((p) => p.text === 'Shortcut steer'),
+          ),
+        );
+        await page.evaluate(() => {
+          const m = setupTest.requests.findLast((r) => r.method === 'turn/steer');
+          setupTest.emit('item/started', {
+            threadId: 'test-thread',
+            item: {
+              id: 'shortcut-steer',
+              clientId: m.params.clientUserMessageId,
+              type: 'userMessage',
+              content: m.params.input,
+            },
+          });
+        });
+        assert.equal(await page.locator('.followup').count(), 1);
+        // Screenshot the compact queued strip attached to the composer at sidebar width.
         await page.setViewportSize({ width: 400, height: 800 });
-        const controls = await page.locator('#queue, #send, #stop').evaluateAll((buttons) =>
-          buttons.map((b) => {
-            const r = b.getBoundingClientRect();
-            return { right: r.right, y: r.y, width: r.width };
+        assert(await page.locator('#stop').isVisible());
+        const rects = await page.locator('.followup, .composer, #stop').evaluateAll((els) =>
+          els.map((el) => {
+            const r = el.getBoundingClientRect();
+            return { left: r.left, right: r.right, width: r.width };
           }),
         );
-        assert(controls.every((b) => b.right <= 400 && b.width > 0));
-        assert(controls.every((b) => Math.abs(b.y - controls[0].y) < 2));
+        assert(rects.every((r) => r.left >= 0 && r.right <= 400 && r.width > 0));
         if (process.env.BAC_UI_SCREENSHOT)
-          await page.screenshot({ path: process.env.BAC_UI_SCREENSHOT });
+          await page.locator('footer').screenshot({ path: process.env.BAC_UI_SCREENSHOT });
         await page.setViewportSize({ width: 1280, height: 720 });
-
+        await page.locator('#prompt').fill('A draft that survives stopping');
         await page
           .locator('#prompt')
           .dispatchEvent('keydown', { key: 'Escape', isComposing: true });
@@ -326,30 +357,26 @@ export function saveScopePreference(){}
           ),
           0,
         );
-        await page.evaluate(() => {
-          setupTest.delayMethod = 'turn/interrupt';
-        });
+        await page.locator('#prompt').press('Escape');
+        assert(await page.locator('#stopConfirmation').isVisible());
+        assert.equal(
+          await page.evaluate(
+            () => setupTest.requests.filter((r) => r.method === 'turn/interrupt').length,
+          ),
+          0,
+        );
         await page.locator('#prompt').press('Escape');
         await page.waitForFunction(() =>
           setupTest.requests.some((r) => r.method === 'turn/interrupt'),
         );
-        assert(await page.locator('#stop').isDisabled());
-        assert.equal(await page.locator('#prompt').inputValue(), 'A draft that survives stopping');
         await page.evaluate(() =>
           setupTest.emit('turn/completed', {
             threadId: 'test-thread',
             turn: { id: 'test-turn', status: 'interrupted' },
           }),
         );
-        assert(await page.locator('#stop').isHidden());
-        await page.getByRole('button', { name: 'Send again', exact: true }).waitFor();
-        assert(
-          (
-            await page.locator('.message.user').filter({ hasText: 'A pending steer' }).innerText()
-          ).includes('Not delivered'),
-        );
-        assert.equal(await page.locator('#followups summary').count(), 1);
-        await page.getByRole('button', { name: 'Send queued message', exact: true }).click();
+        assert.equal(await page.locator('#prompt').inputValue(), 'A draft that survives stopping');
+        await page.getByRole('button', { name: 'Resume', exact: true }).click();
         await page.waitForFunction(() =>
           setupTest.requests.some((r) => r.method === 'thread/queue/start'),
         );
@@ -357,31 +384,9 @@ export function saveScopePreference(){}
         await page.evaluate(() =>
           setupTest.emit('turn/started', { threadId: 'test-thread', turn: { id: 'test-turn' } }),
         );
-        await page.getByRole('button', { name: 'Send again', exact: true }).click();
-        await page.waitForFunction(
-          () =>
-            setupTest.requests.filter(
-              (r) =>
-                r.method === 'turn/steer' &&
-                r.params.input.some((p) => p.text === 'A pending steer'),
-            ).length === 2,
-        );
-        const retries = await page.evaluate(() =>
-          setupTest.requests
-            .filter(
-              (r) =>
-                r.method === 'turn/steer' &&
-                r.params.input.some((p) => p.text === 'A pending steer'),
-            )
-            .map((r) => r.params),
-        );
-        assert.deepEqual(retries[0].input, retries[1].input);
-        assert.notEqual(retries[0].clientUserMessageId, retries[1].clientUserMessageId);
-        // Another view's queue changes are refreshed through the server notification.
         await page.locator('#prompt').fill('Remove this queued message');
-        await page.locator('#queue').click();
-        await page.getByRole('button', { name: 'Remove queued message', exact: true }).waitFor();
-        await page.getByRole('button', { name: 'Remove queued message', exact: true }).click();
+        await page.locator('#prompt').press('Enter');
+        await page.getByRole('button', { name: 'Delete queued message', exact: true }).click();
         await page.waitForFunction(() => document.querySelector('#followups').hidden);
         await page.evaluate(() => {
           setupTest.emit('item/completed', {

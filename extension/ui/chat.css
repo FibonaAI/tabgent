@@ -1265,62 +1265,85 @@ select option {
   text-decoration: underline;
 }
 
-/* Running-turn input stays compact; the stop control remains reachable with a draft. */
-.queue-button {
-  width: 28px;
-  height: 30px;
-  flex: none;
-  padding: 0;
-  color: var(--muted);
-  font-size: 20px;
-}
+/* Desktop-style queued messages sit behind the composer, with actions on the right. */
 #followups {
-  max-height: 160px;
+  margin: 0 16px -12px;
+  padding: 5px 10px 16px;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 18px 18px 0 0;
+  background: var(--hover);
+  max-height: 180px;
   overflow-y: auto;
-  margin-bottom: 8px;
-  font-size: 12px;
+}
+.composer {
+  position: relative;
 }
 .followup {
   display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 7px 10px;
-  border-bottom: 1px solid var(--border);
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  font-size: 13px;
 }
-.followup details {
+.followup > svg {
+  color: var(--muted);
+}
+.followup svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.followup-text {
   flex: 1;
   min-width: 0;
-}
-.followup summary {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: pointer;
-  color: var(--muted);
-}
-.followup details div {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  padding-top: 6px;
 }
 .followup button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   flex: none;
-  padding: 0 4px;
-  font-size: 12px;
+  padding: 5px 3px;
   color: var(--muted);
+  font-size: 12px;
 }
-#queueEditor {
-  width: min(440px, calc(100vw - 40px));
+.followup-menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 5px;
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 20px;
-  color: var(--ink);
+  border-radius: 10px;
   background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 4px 18px #0002;
 }
-#queueEditor textarea {
+.followup-menu button {
   display: block;
   width: 100%;
-  margin-block: 12px;
+  padding: 8px 12px;
+  text-align: start;
+  color: var(--ink);
+}
+.queue-paused {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 4px 0;
+}
+.queue-paused button {
+  color: var(--ink);
 }
 
 .delivery-status {
@@ -1328,4 +1351,15 @@ select option {
   color: var(--muted);
   font-size: 11px;
   margin-top: 4px;
+}
+
+#stopConfirmation {
+  position: absolute;
+  right: 12px;
+  bottom: 48px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 12px;
 }

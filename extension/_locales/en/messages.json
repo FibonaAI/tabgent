@@ -611,13 +611,13 @@
     "message": "Answer each question before continuing."
   },
   "steerHint": {
-    "message": "Send now · Enter"
+    "message": "Steer · Enter"
   },
   "steerLabel": {
-    "message": "Send now"
+    "message": "Steer"
   },
   "queueHint": {
-    "message": "Queue message · Tab"
+    "message": "Queue message · Enter"
   },
   "queueLabel": {
     "message": "Queue message"
@@ -626,28 +626,19 @@
     "message": "Queued messages"
   },
   "editFollowup": {
-    "message": "Edit queued message"
+    "message": "Edit message"
   },
   "removeFollowup": {
-    "message": "Remove queued message"
-  },
-  "startFollowup": {
-    "message": "Send queued message"
+    "message": "Delete queued message"
   },
   "followupPlaceholder": {
-    "message": "Add a follow-up…"
-  },
-  "runningKeyboardHint": {
-    "message": "Enter to send now · Tab to queue · Esc to stop"
+    "message": "Do anything"
   },
   "stopHint": {
     "message": "Stop · Esc"
   },
   "stopping": {
     "message": "Stopping…"
-  },
-  "queued": {
-    "message": "Queued"
   },
   "sendingMessage": {
     "message": "Sending…"
@@ -656,5 +647,27 @@
     "message": "Pending"
   },
   "messageNotDelivered": { "message": "Not delivered" },
-  "resendMessage": { "message": "Send again" }
+  "resendMessage": { "message": "Retry" },
+  "steerQueued": {
+    "message": "Steer"
+  },
+  "steerQueuedHint": {
+    "message": "Submit without interrupting the model"
+  },
+  "followupActions": {
+    "message": "Queued message actions"
+  },
+  "disableQueueing": {
+    "message": "Turn off queueing"
+  },
+  "enableQueueing": {
+    "message": "Turn on queueing"
+  },
+  "queuePaused": {
+    "message": "Queue paused because you interrupted"
+  },
+  "resumeQueue": {
+    "message": "Resume"
+  },
+  "confirmStop": { "message": "Press Esc again to stop" }
 }

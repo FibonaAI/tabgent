@@ -1,3 +1,4 @@
+import { agentPointer } from './agent-pointer.js';
 import { pdfSource, pdfTab, pdfCommand } from './pdf-routing.js';
 import { nativeInput } from './browser-input.js';
 const newTab = (tab) => /^chrome:\/\/(newtab|new-tab-page)\//.test(tab.url || '');
@@ -101,6 +102,9 @@ async function operate(session, args, id, readPdf) {
     await check();
     return result;
   }
+  // Only one pointer per tab, including when operations cross iframe boundaries.
+  if (['click', 'hover', 'scroll', 'drag', 'check', 'select'].includes(args.action))
+    await agentPointer(id, null, null);
   let result;
   if (args.action === 'navigate') result = await chrome.tabs.update(id, { url: url() });
   else if (args.action === 'focus') result = await chrome.tabs.update(id, { active: true });
@@ -193,6 +197,17 @@ async function operate(session, args, id, readPdf) {
     const frameId = args.frameId ?? 0;
     if (!Number.isInteger(frameId) || frameId < 0) throw Error('Invalid frame ID');
     const dom = async (action) => {
+      if (['click', 'hover', 'scroll', 'check', 'select'].includes(action)) {
+        const point = await dom('point');
+        await check();
+        await agentPointer(
+          id,
+          point.x,
+          point.y,
+          ['click', 'check', 'select'].includes(action),
+          frameId,
+        );
+      }
       await check();
       const frames = await chrome.webNavigation.getAllFrames({ tabId: id });
       const frame = frames.find((f) => f.frameId === frameId);

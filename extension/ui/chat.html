@@ -32,9 +32,11 @@
             fill="none"
             stroke="currentColor"
             stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
             aria-hidden="true"
           >
-            <path d="M14 4h6v6m0-6-9 9M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5" />
+            <path d="M14 4h6v6m0-6-9 9M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
           </svg>
         </button>
         <button
@@ -48,6 +50,8 @@
             fill="none"
             stroke="currentColor"
             stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
             aria-hidden="true"
           >
             <path d="M12 5v14M5 12h14" />
@@ -102,6 +106,7 @@
           aria-controls="commandOptions"
           aria-expanded="false"
         ></textarea>
+        <span id="stopConfirmation" role="status" hidden>$i18n{confirmStop}</span>
         <div class="composer-bottom">
           <div class="settings">
             <button
@@ -148,16 +153,6 @@
             </button>
           </div>
           <button
-            id="queue"
-            type="button"
-            class="queue-button"
-            title="$i18n{queueHint}"
-            aria-label="$i18n{queueLabel}"
-            hidden
-          >
-            ⇥
-          </button>
-          <button
             id="send"
             class="send"
             aria-label="$i18n{sendLabel}"
@@ -190,7 +185,6 @@
         <span id="keyboardHint">$i18n{keyboardHint}</span><span id="contextUsage" hidden></span>
       </div>
     </footer>
-    <dialog id="queueEditor" aria-label="$i18n{editFollowup}"></dialog>
     <dialog id="commandDialog" aria-label="$i18n{commands}"></dialog>
     <div id="contextDetails" popover>
       <div id="contextFullTitle"></div>

@@ -1,3 +1,4 @@
+import { agentPointer } from './agent-pointer.js';
 // CDP input uses CSS viewport pixels, independent of screenshot device scale.
 export async function nativeInput(tabId, args, checkScope) {
   let attached = false;
@@ -6,8 +7,11 @@ export async function nativeInput(tabId, args, checkScope) {
     await checkScope();
     return chrome.debugger.sendCommand(target, method, params);
   };
-  const mouse = (type, x, y, extra = {}) =>
-    command('Input.dispatchMouseEvent', { type, x, y, ...extra });
+  const mouse = async (type, x, y, extra = {}) => {
+    await checkScope();
+    await agentPointer(tabId, x, y, type === 'mousePressed' || !!extra.buttons);
+    return command('Input.dispatchMouseEvent', { type, x, y, ...extra });
+  };
   try {
     await chrome.debugger.attach(target, '1.3');
     attached = true;
@@ -28,6 +32,7 @@ export async function nativeInput(tabId, args, checkScope) {
       return { x, y };
     };
     if (args.action === 'screenshot') {
+      await agentPointer(tabId, null, null);
       const shot = await command('Page.captureScreenshot', {
         format: 'png',
         captureBeyondViewport: false,

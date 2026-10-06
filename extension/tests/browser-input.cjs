@@ -44,11 +44,33 @@ const { chromium } = require('playwright');
       },
       { id, args },
     );
+  const pointers = () =>
+    control.evaluate(async (id) => {
+      return chrome.scripting.executeScript({
+        target: { tabId: id, allFrames: true },
+        func: () => {
+          const state = globalThis.__bacAgentPointer;
+          return state
+            ? {
+                x: parseFloat(state.cursor.style.left) + 2,
+                y: parseFloat(state.cursor.style.top) + 2,
+                hitTransparent: getComputedStyle(state.host).pointerEvents === 'none',
+                hidden: state.host.getAttribute('aria-hidden'),
+              }
+            : null;
+        },
+      });
+    }, id);
   let read = await run({ action: 'read' });
   const find = (text) => read.controls.find((x) => x.text === text).selector;
   await run({ action: 'click', selector: find('Click target') });
   assert.equal(await page.locator('#click').textContent(), 'Clicked true');
-  console.log('PASS trusted selector click');
+  const cursor = (await pointers()).find((p) => p.frameId === 0).result;
+  const buttonBox = await page.locator('#click').boundingBox();
+  assert(Math.abs(cursor.x - (buttonBox.x + buttonBox.width / 2)) < 2);
+  assert(cursor.hitTransparent);
+  assert.equal(cursor.hidden, 'true');
+  console.log('PASS trusted selector click and non-intercepting pointer');
   await run({ action: 'type', selector: find('Name'), text: '\u6d4f\u89c8\u5668 works' });
   assert.equal(await page.locator('#name').inputValue(), '\u6d4f\u89c8\u5668 works');
   await run({ action: 'press', selector: find('Name'), key: 'Enter' });
@@ -90,11 +112,25 @@ const { chromium } = require('playwright');
     await page.frameLocator('iframe').locator('input').inputValue(),
     'cross origin works',
   );
-  console.log('PASS cross-origin iframe read / click / native typing');
+  assert((await pointers()).some((p) => p.frameId === frame.frameId && p.result));
+  console.log('PASS cross-origin iframe read / click / native typing / pointer');
   await run({ action: 'read' });
   await assert.rejects(run({ action: 'click', selector: find('Name') }), /missing|ambiguous/);
   console.log('PASS stale selectors rejected');
+  await run({ action: 'hover', x: 100, y: 40 });
+  assert.equal((await pointers()).filter((p) => p.result).length, 1, 'One pointer across frames');
+  await page.screenshot({ path: '/tmp/bac-agent-pointer.png' });
   const screenshot = await run({ action: 'screenshot' });
+  assert(
+    (await pointers()).every((p) => p.result === null),
+    'Pointer excluded from screenshots',
+  );
+  await run({ action: 'hover', x: 110, y: 50 });
+  await page.waitForTimeout(1750);
+  assert(
+    (await pointers()).every((p) => p.result === null),
+    'Idle pointer removed',
+  );
   assert(screenshot.viewport.width > 0);
   const png = Buffer.from(screenshot.data, 'base64');
   assert(png.readUInt32BE(16) >= screenshot.viewport.width);

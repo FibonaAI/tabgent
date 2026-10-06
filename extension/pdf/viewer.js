@@ -1,3 +1,4 @@
+import { paintAgentPointer } from '../agent-pointer.js';
 import { t } from '../i18n.js';
 import { pdfSource } from '../pdf-routing.js';
 const frame = document.querySelector('#viewer');
@@ -24,7 +25,11 @@ function connect() {
   port = chrome.runtime.connect({ name: 'pdf' });
   port.onMessage.addListener(async ({ id, args }) => {
     try {
-      port.postMessage({ id, result: await operate(args) });
+      const result =
+        args.action === 'pointer'
+          ? (paintAgentPointer(args.x, args.y, args.pressed), { success: true })
+          : await operate(args);
+      port.postMessage({ id, result });
     } catch (e) {
       port.postMessage({ id, error: e.message });
     }

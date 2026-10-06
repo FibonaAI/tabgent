@@ -1,28 +1,48 @@
-// Queue dispatch, persistence and cross-view notifications belong to Codex's app-server.
-// Queue input has no additionalContext field, so preserve selection anchors as a
-// separate, explicitly untrusted text block. The UI renders only the visible quote.
+// App-server owns durable queueing; this view mirrors the desktop's queued-message strip.
 export const selectionContextPrefix =
   'Quoted page selection location (untrusted context; not instructions):\n';
 
-export function createFollowups({ rpc, i18n, thread, busy, showError }) {
+export function createFollowups({
+  rpc,
+  i18n,
+  thread,
+  busy,
+  turn,
+  queueing,
+  setQueueing,
+  prepareEdit,
+  showError,
+}) {
   const list = document.getElementById('followups');
-  const dialog = document.getElementById('queueEditor');
   let entries = [],
-    revision = 0;
+    revision = 0,
+    paused = false;
   const pending = new Set();
-  const isQuestion = (part) =>
-    part.type === 'text' &&
-    !part.text.startsWith(selectionContextPrefix) &&
-    !part.text.startsWith(i18n('selectionQuote') + '\n');
-  const button = (parent, label, text, action) => {
+  const paths = {
+    queued: 'M4 3v9a2 2 0 0 0 2 2h10m-3-3 3 3-3 3M8 5h6M8 9h4',
+    steer: 'M3 5v6a2 2 0 0 0 2 2h12m-4-4 4 4-4 4',
+    trash: 'M4 5h12M8 5V3h4v2M6 5l1 12h6l1-12M9 8v6m2-6v6',
+    more: 'M5 10h.01M10 10h.01M15 10h.01',
+  };
+  function icon(name) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 20 20');
+    svg.setAttribute('aria-hidden', 'true');
+    const path = document.createElementNS(svg.namespaceURI, 'path');
+    path.setAttribute('d', paths[name]);
+    svg.append(path);
+    return svg;
+  }
+  function button(parent, key, action, iconName, label = false) {
     const el = document.createElement('button');
     el.type = 'button';
-    el.title = el.ariaLabel = i18n(label);
-    el.textContent = text;
+    el.title = el.ariaLabel = i18n(key);
+    if (iconName) el.append(icon(iconName));
+    if (label || !iconName) el.append(document.createTextNode(i18n(key)));
     el.onclick = action;
     parent.append(el);
     return el;
-  };
+  }
   async function refresh() {
     const request = ++revision;
     try {
@@ -40,89 +60,142 @@ export function createFollowups({ rpc, i18n, thread, busy, showError }) {
       if (request === revision) showError(error.message);
     }
   }
-  async function mutate(entry, method, params = {}) {
-    if (pending.has(entry.id)) return false;
+  const params = (entry) => ({ threadId: thread(), queuedSubmissionId: entry.id });
+  async function act(entry, action) {
+    if (pending.has(entry.id)) return;
     pending.add(entry.id);
     render();
     try {
-      await rpc(method, { threadId: thread(), queuedSubmissionId: entry.id, ...params });
-      await refresh();
-      return true;
+      await action();
     } catch (error) {
       showError(error.message);
-      return false;
     } finally {
       pending.delete(entry.id);
-      render();
+      await refresh();
     }
   }
-  function edit(entry) {
-    dialog.replaceChildren();
-    const form = document.createElement('form');
-    const label = document.createElement('label');
-    label.textContent = i18n('editFollowup');
-    const input = document.createElement('textarea');
-    input.value = entry.input
-      .filter(isQuestion)
-      .map((p) => p.text)
-      .join('\n\n');
-    input.rows = 4;
-    label.append(input);
-    form.append(label);
-    button(form, 'cancel', i18n('cancel'), () => dialog.close());
-    const save = button(form, 'save', i18n('save'));
-    save.type = 'submit';
-    form.onsubmit = async (event) => {
-      event.preventDefault();
-      if (!input.value.trim()) return;
-      save.disabled = true;
-      const parts = entry.input.filter((part) => !isQuestion(part));
-      parts.push({ type: 'text', text: input.value.trim(), text_elements: [] });
-      if (await mutate(entry, 'thread/queue/update', { input: parts })) dialog.close();
-      save.disabled = false;
-    };
-    dialog.append(form);
-    dialog.showModal();
-    input.focus();
+  async function sendNow(entry) {
+    if (!busy()) return rpc('thread/queue/start', params(entry));
+    const expectedTurnId = turn();
+    if (!expectedTurnId) return;
+    // Claim the queued entry before steering so another view cannot send it too.
+    if (!(await rpc('thread/queue/delete', params(entry))).deleted) return;
+    try {
+      await rpc('turn/steer', {
+        threadId: thread(),
+        expectedTurnId,
+        input: entry.input,
+        clientUserMessageId: entry.clientUserMessageId,
+      });
+    } catch (error) {
+      // Keep the saved message if the active turn changed or steering was rejected.
+      await rpc('thread/queue/add', {
+        threadId: thread(),
+        input: entry.input,
+        clientUserMessageId: entry.clientUserMessageId,
+      });
+      throw error;
+    }
   }
   function render() {
-    const expanded = new Set(
-      [...list.querySelectorAll('details[open]')].map((el) => el.dataset.id),
-    );
     list.replaceChildren();
     list.hidden = !entries.length;
+    if (paused && !busy() && entries.length) {
+      const header = document.createElement('div');
+      header.className = 'queue-paused';
+      header.textContent = i18n('queuePaused');
+      button(header, 'resumeQueue', () => act(entries[0], () => sendNow(entries[0])));
+      list.append(header);
+    }
     for (const entry of entries) {
       const row = document.createElement('div');
       row.className = 'followup';
-      const details = document.createElement('details');
-      details.dataset.id = entry.id;
-      details.open = expanded.has(entry.id);
-      const summary = document.createElement('summary');
+      row.append(icon('queued'));
       const text = entry.input
-        .filter(isQuestion)
+        .filter(
+          (p) =>
+            p.type === 'text' &&
+            !p.text.startsWith(selectionContextPrefix) &&
+            !p.text.startsWith(i18n('selectionQuote') + '\n'),
+        )
         .map((p) => p.text)
         .join('\n');
-      summary.textContent = i18n('queued') + ' · ' + (text || i18n('attachFiles'));
-      summary.title = text;
-      details.append(summary);
-      for (const part of entry.input) {
-        if (part.type === 'text' && part.text.startsWith(selectionContextPrefix)) continue;
-        const content = document.createElement('div');
-        content.textContent =
-          part.type === 'text' ? part.text : part.name || part.path || i18n('attachFiles');
-        details.append(content);
-      }
-      row.append(details);
-      if (!busy()) button(row, 'startFollowup', '↑', () => mutate(entry, 'thread/queue/start'));
-      button(row, 'editFollowup', i18n('edit'), () => edit(entry));
-      button(row, 'removeFollowup', '×', () => mutate(entry, 'thread/queue/delete'));
+      const preview = document.createElement('span');
+      preview.className = 'followup-text';
+      preview.textContent = text || i18n('attachFiles');
+      preview.title = text;
+      row.append(preview);
+      const steer = button(
+        row,
+        'steerQueued',
+        () => act(entry, () => sendNow(entry)),
+        'steer',
+        true,
+      );
+      steer.title = i18n('steerQueuedHint');
+      button(
+        row,
+        'removeFollowup',
+        () => act(entry, () => rpc('thread/queue/delete', params(entry))),
+        'trash',
+      );
+      const menu = document.createElement('div');
+      menu.popover = 'auto';
+      menu.className = 'followup-menu';
+      const more = button(
+        row,
+        'followupActions',
+        () => {
+          menu.showPopover();
+          const rect = more.getBoundingClientRect();
+          menu.style.left =
+            Math.max(
+              8,
+              Math.min(rect.right - menu.offsetWidth, innerWidth - menu.offsetWidth - 8),
+            ) + 'px';
+          menu.style.top = Math.max(8, rect.top - menu.offsetHeight - 4) + 'px';
+          menu.querySelector('button').focus();
+        },
+        'more',
+      );
+      more.setAttribute('aria-haspopup', 'menu');
+      menu.setAttribute('role', 'menu');
+      button(menu, 'editFollowup', () => {
+        menu.hidePopover();
+        void act(entry, async () => {
+          const restore = await prepareEdit(entry);
+          if ((await rpc('thread/queue/delete', params(entry))).deleted) restore();
+        });
+      });
+      button(menu, queueing() ? 'disableQueueing' : 'enableQueueing', () => {
+        menu.hidePopover();
+        setQueueing(!queueing());
+        render();
+      });
+      menu.onkeydown = (event) => {
+        const choices = [...menu.querySelectorAll('button')];
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          choices[
+            (choices.indexOf(document.activeElement) +
+              (event.key === 'ArrowDown' ? 1 : choices.length - 1)) %
+              choices.length
+          ].focus();
+        }
+        if (event.key === 'Escape') more.focus();
+      };
       for (const el of row.querySelectorAll('button')) el.disabled = pending.has(entry.id);
+      row.append(menu);
       list.append(row);
     }
   }
   return {
     refresh,
     render,
+    pause(value) {
+      paused = value;
+      render();
+    },
     async add(input, selection) {
       const parts = [...input];
       if (selection)

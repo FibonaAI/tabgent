@@ -48,6 +48,14 @@ let turnStatus = null,
   activeReply = null,
   worklog = null;
 let selectedPageText = null;
+let restoredInput = [];
+let queueing = localStorage.getItem('codex:followupMode') !== 'steer';
+let stopConfirmation = null;
+function clearStopConfirmation() {
+  clearTimeout(stopConfirmation);
+  stopConfirmation = null;
+  $('stopConfirmation').hidden = true;
+}
 let attachments = [],
   attaching = 0;
 const attachmentPreviews = new Map();
@@ -71,15 +79,16 @@ function resizePrompt() {
   $('send').hidden = busy && !hasDraft;
   $('send').disabled =
     !ready || sending || stopping || attaching > 0 || !hasDraft || (busy && !turnId);
-  $('send').title = i18n(busy ? 'steerHint' : 'sendHint');
-  $('send').setAttribute('aria-label', i18n(busy ? 'steerLabel' : 'sendLabel'));
-  $('queue').hidden = !busy || !hasDraft;
-  $('queue').disabled = $('send').disabled;
-  $('stop').hidden = !busy;
+  $('send').title = i18n(busy && queueing ? 'queueHint' : busy ? 'steerHint' : 'sendHint');
+  $('send').setAttribute(
+    'aria-label',
+    i18n(busy && queueing ? 'queueLabel' : busy ? 'steerLabel' : 'sendLabel'),
+  );
+  $('stop').hidden = !busy || hasDraft;
   $('stop').disabled = stopping || !turnId;
   $('stop').title = i18n(stopping ? 'stopping' : 'stopHint');
   $('prompt').placeholder = i18n(busy ? 'followupPlaceholder' : 'promptPlaceholder');
-  $('keyboardHint').textContent = i18n(busy ? 'runningKeyboardHint' : 'keyboardHint');
+  $('keyboardHint').textContent = busy ? '' : i18n('keyboardHint');
 }
 function nearBottom() {
   return $('scroll').scrollHeight - $('scroll').scrollTop - $('scroll').clientHeight < 100;
@@ -194,6 +203,7 @@ function setBusy(value, outcome = 'completed') {
     if (follow) requestAnimationFrame(scrollEnd);
   }
   busy = value;
+  clearStopConfirmation();
   if (!value) stopping = false;
   resizePrompt();
   followups.render();
@@ -706,6 +716,8 @@ async function completeSetup() {
     if (active && thread.status?.type === 'active') {
       turnId = active.id;
       setBusy(true);
+    } else {
+      followups.pause(thread.turns?.at(-1)?.status === 'interrupted');
     }
     ready = true;
     commands.setMode(bridge.settings?.mode);
@@ -737,7 +749,7 @@ async function completeSetup() {
     completingSetup = false;
   }
 }
-async function send(queue = false) {
+async function send(queue = busy && queueing) {
   if (sending || stopping) return;
   const text = $('prompt').value.trim();
   if (ready && text.startsWith('/')) {
@@ -755,7 +767,11 @@ async function send(queue = false) {
   const selection = selectedPageText;
   const submittedAttachments = [...attachments];
   const input = text ? [{ type: 'text', text, text_elements: [] }] : [];
+  const retained = [...restoredInput];
   input.push(...commands.input());
+  for (const part of retained)
+    if (!input.some((existing) => JSON.stringify(existing) === JSON.stringify(part)))
+      input.push(part);
   input.push(
     ...submittedAttachments.map((a) =>
       a.image
@@ -808,6 +824,7 @@ async function send(queue = false) {
     const delivery = submitted.el.querySelector('.delivery-status');
     if (delivery && !submitted.undelivered) delivery.textContent = i18n('pendingMessage');
     commands.sent();
+    restoredInput = restoredInput.filter((part) => !retained.includes(part));
     attachments = attachments.filter((a) => !submittedAttachments.includes(a));
     renderAttachments();
     if (selection && selectedPageText?.id === selection.id) {
@@ -887,6 +904,50 @@ const followups = createFollowups({
   i18n,
   thread: () => threadId,
   busy: () => busy,
+  turn: () => turnId,
+  queueing: () => queueing,
+  setQueueing(value) {
+    queueing = value;
+    localStorage.setItem('codex:followupMode', value ? 'queue' : 'steer');
+    resizePrompt();
+  },
+  async prepareEdit(entry) {
+    const extras = [],
+      files = [];
+    let selection = null;
+    const text = [];
+    for (const part of entry.input) {
+      if (part.type === 'text' && part.text.startsWith(selectionContextPrefix)) {
+        selection = JSON.parse(part.text.slice(selectionContextPrefix.length));
+      } else if (part.type === 'localImage' || part.type === 'mention') {
+        files.push({
+          name: part.name || part.path.split('/').pop(),
+          path: part.path,
+          image: part.type === 'localImage',
+        });
+      } else if (part.type === 'image') {
+        const data = part.url || part.imageUrl;
+        const saved = await rpc('bridge/attachment/save', {
+          name: 'image.png',
+          data: data.split(',')[1],
+        });
+        attachmentPreviews.set(saved.path, data);
+        files.push({ name: 'image.png', path: saved.path, image: true, data });
+      } else if (part.type === 'text' && !part.text.startsWith(i18n('selectionQuote') + '\n'))
+        text.push(part.text);
+      else extras.push(part);
+    }
+    return () => {
+      $('prompt').value = [...text, $('prompt').value].filter(Boolean).join('\n\n');
+      attachments.push(...files);
+      if (selection) selectedPageText = selection;
+      restoredInput.push(...extras.filter((part) => part.type !== 'text' || !selection));
+      renderSelection();
+      renderAttachments();
+      saveDraft();
+      $('prompt').focus();
+    };
+  },
   showError,
 });
 function question(message) {
@@ -1183,6 +1244,7 @@ addWebUiListener('codex-message', (message) => {
       title(p.threadName);
       break;
     case 'turn/started':
+      followups.pause(false);
       turnId = p.turn.id;
       setBusy(true);
       break;
@@ -1201,6 +1263,7 @@ addWebUiListener('codex-message', (message) => {
         for (const submitted of optimisticUsers)
           if (submitted.expectedTurnId === p.turn.id) recoverSteer(submitted);
       }
+      followups.pause(p.turn.status === 'interrupted');
       showError(p.turn.error?.message);
       break;
     case 'error':
@@ -1273,22 +1336,24 @@ function refreshSetup() {
 document.addEventListener('visibilitychange', refreshSetup);
 window.addEventListener('focus', refreshSetup);
 setInterval(refreshSetup, 2000);
+window.addEventListener('storage', (event) => {
+  if (event.key !== 'codex:followupMode') return;
+  queueing = event.newValue !== 'steer';
+  resizePrompt();
+  followups.render();
+});
 $('send').onclick = () => send();
-$('queue').onclick = () => send(true);
 $('prompt').onkeydown = (e) => {
   if (e.isComposing || e.keyCode === 229) return;
   if (commands.keydown(e)) {
     e.preventDefault();
     return;
   }
-  if (e.key === 'Tab' && !e.shiftKey && busy && ($('prompt').value.trim() || attachments.length)) {
+  if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
     e.preventDefault();
-    void send(true);
-    return;
-  }
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    send();
+    if (e.repeat) return;
+    clearStopConfirmation();
+    send(busy && (e.metaKey || e.ctrlKey ? !queueing : queueing));
   }
 };
 document.addEventListener('keydown', (event) => {
@@ -1300,9 +1365,15 @@ document.addEventListener('keydown', (event) => {
     !busy
   )
     return;
-  if (document.querySelector('dialog[open], :popover-open')) return;
+  if (document.querySelector('dialog[open], :popover-open') || $('questions').childElementCount)
+    return;
   event.preventDefault();
-  $('stop').click();
+  if (event.repeat) return;
+  if (stopConfirmation) $('stop').click();
+  else {
+    $('stopConfirmation').hidden = false;
+    stopConfirmation = setTimeout(clearStopConfirmation, 2000);
+  }
 });
 $('prompt').oninput = () => {
   commands.update();
@@ -1323,6 +1394,7 @@ $('reconnect').onclick = () => {
 };
 $('stop').onclick = async () => {
   if (stopping || !turnId) return;
+  clearStopConfirmation();
   const interruptedTurn = turnId;
   stopping = true;
   resizePrompt();
