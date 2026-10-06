@@ -119,7 +119,7 @@ const { chromium } = require('playwright');
   console.log('PASS stale selectors rejected');
   await run({ action: 'hover', x: 100, y: 40 });
   assert.equal((await pointers()).filter((p) => p.result).length, 1, 'One pointer across frames');
-  await page.screenshot({ path: '/tmp/bac-agent-pointer.png' });
+  await page.screenshot({ path: '/tmp/tabgent-agent-pointer.png' });
   const screenshot = await run({ action: 'screenshot' });
   assert(
     (await pointers()).every((p) => p.result === null),

@@ -4,7 +4,7 @@ from pathlib import Path
 import zipfile
 
 root = Path(__file__).resolve().parents[1]
-output = root / "dist/Browser-Agent-Connector-macOS.zip"
+output = root / "dist/Tabgent-macOS.zip"
 output.parent.mkdir(exist_ok=True)
 files = [
     root / name
@@ -34,6 +34,6 @@ for directory in ("extension", "docs", "scripts", ".github"):
 with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
     for file in sorted(files):
         archive.write(
-            file, "Browser-Agent-Connector/" + file.relative_to(root).as_posix()
+            file, "Tabgent/" + file.relative_to(root).as_posix()
         )
 print(output)

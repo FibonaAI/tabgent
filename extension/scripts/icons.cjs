@@ -1,4 +1,4 @@
-// Rasterize the Browser Agent Connector brand mark for Chrome's toolbar and extension manager.
+// Rasterize the Tabgent brand mark for Chrome's toolbar and extension manager.
 const fs = require('node:fs'),
   path = require('node:path');
 const { chromium } = require('playwright');

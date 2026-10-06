@@ -10,5 +10,5 @@ bundled locally. Source maps, the sample PDF, debugging tools, scripting sandbox
 and translations other than en-US are omitted. `web/locale/locale.json` is
 restricted to en-US. Upstream executable code is unmodified.
 
-Browser Agent Connector's wrapper disables PDF JavaScript, remote model downloads,
+Tabgent's wrapper disables PDF JavaScript, remote model downloads,
 and document replacement through the viewer. Integration lives in `extension/pdf/`.

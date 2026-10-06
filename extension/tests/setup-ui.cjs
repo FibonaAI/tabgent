@@ -225,7 +225,7 @@ export function saveScopePreference(){}
         await assertAnchored('#modelMenu', '#modelButton');
 
         assert(await page.locator('#effortRange').isVisible());
-        await page.locator('#modelMenu').screenshot({ path: '/tmp/bac-model-menu.png' });
+        await page.locator('#modelMenu').screenshot({ path: '/tmp/tabgent-model-menu.png' });
         await page.locator('#modelMenuHeader').click();
         await assertAnchored('#modelMenu', '#modelButton');
         assert.equal(await page.locator('#modelOptions button').count(), 1);
@@ -236,7 +236,7 @@ export function saveScopePreference(){}
         await page.setViewportSize({ width: 390, height: 720 });
         await assertAnchored('#permissionMenu', '#permissionButton');
         await page.setViewportSize({ width: 1280, height: 720 });
-        await page.locator('#permissionMenu').screenshot({ path: '/tmp/bac-permission-menu.png' });
+        await page.locator('#permissionMenu').screenshot({ path: '/tmp/tabgent-permission-menu.png' });
         await page.locator('[data-mode="auto"]').click();
         await page.waitForFunction(
           () => document.querySelector('#permissionLabel').textContent === 'Approve for me',
@@ -303,7 +303,7 @@ export function saveScopePreference(){}
         assert(await page.locator('#historyUrlDetails').isHidden());
         assert(!(await page.locator('.history-entry small').first().innerText()).includes('PM'));
         assert.equal(await page.locator('.history-date').innerText(), 'Earlier');
-        await page.locator('#historyPanel').screenshot({ path: '/tmp/bac-history-refined.png' });
+        await page.locator('#historyPanel').screenshot({ path: '/tmp/tabgent-history-refined.png' });
         await page.locator('.history-entry').last().click();
         assert.equal(
           (await page.evaluate(() => setupTest.actions.at(-1))).threadId,
@@ -453,7 +453,7 @@ export function saveScopePreference(){}
         assert(noteHidden, 'Raw injected notes must not duplicate the visible notice');
         await page
           .locator('#messages')
-          .screenshot({ path: '/tmp/bac-lineage-messages-preview.png' });
+          .screenshot({ path: '/tmp/tabgent-lineage-messages-preview.png' });
         await page.evaluate(() => document.querySelector('#lineage-timeline-fixture').remove());
         console.log(
           'PASS chronological parent/child messages, live updates, deduplication, safe titles and open',
@@ -675,8 +675,8 @@ export function saveScopePreference(){}
           }),
         );
         assert(rects.every((r) => r.left >= 0 && r.right <= 400 && r.width > 0));
-        if (process.env.BAC_UI_SCREENSHOT)
-          await page.locator('footer').screenshot({ path: process.env.BAC_UI_SCREENSHOT });
+        if (process.env.TABGENT_UI_SCREENSHOT)
+          await page.locator('footer').screenshot({ path: process.env.TABGENT_UI_SCREENSHOT });
         await page.setViewportSize({ width: 1280, height: 720 });
         await page.locator('#prompt').fill('A draft that survives stopping');
         await page
@@ -754,9 +754,9 @@ export function saveScopePreference(){}
         await page.waitForFunction(() => !document.querySelector('#goal').hidden);
         assert((await page.locator('#goal').innerText()).includes('Test goal'));
         await page.setViewportSize({ width: 440, height: 850 });
-        await page.screenshot({ path: '/tmp/bac-transcript-narrow.png' });
+        await page.screenshot({ path: '/tmp/tabgent-transcript-narrow.png' });
         await page.locator('#prompt').fill('/');
-        await page.screenshot({ path: '/tmp/bac-commands-narrow.png' });
+        await page.screenshot({ path: '/tmp/tabgent-commands-narrow.png' });
         assert.equal(errors.length, 0, errors.join('\n'));
         await context.close();
         console.log(

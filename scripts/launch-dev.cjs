@@ -18,7 +18,7 @@ const install = spawnSync(
 if (install.status !== 0) process.exit(install.status || 1);
 const profile =
   process.env.CHROME_PROFILE ||
-  path.join(os.homedir(), 'Library/Application Support/Browser Agent Connector Development');
+  path.join(os.homedir(), 'Library/Application Support/Tabgent Development');
 const args = [
   `--user-data-dir=${profile}`,
   `--load-extension=${path.join(root, 'extension')}`,
@@ -31,7 +31,7 @@ if (process.env.CHROME_DEBUG_PORT)
     '--remote-debugging-address=127.0.0.1',
   );
 args.push('chrome://newtab/');
-const log = path.join(os.tmpdir(), 'browser-agent-connector-dev.log');
+const log = path.join(os.tmpdir(), 'tabgent-dev.log');
 const output = fs.openSync(log, 'a');
 const browser = spawn(binary, args, { detached: true, stdio: ['ignore', output, output] });
 browser.on('error', (error) => {

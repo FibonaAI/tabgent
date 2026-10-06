@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Browser Agent Connector native messaging host: stdlib only, one Codex process per owned tab."""
+"""Tabgent native messaging host: stdlib only, one Codex process per owned tab."""
 import concurrent.futures
 import json
 import os
@@ -247,8 +247,8 @@ class Session:
                 "initialize",
                 {
                     "clientInfo": {
-                        "name": "browser_agent_connector",
-                        "title": "Browser Agent Connector",
+                        "name": "tabgent",
+                        "title": "Tabgent",
                         "version": "0.1.0",
                     },
                     "capabilities": {"experimentalApi": True},
@@ -261,7 +261,7 @@ class Session:
                     "project/create",
                     {
                         "idempotencyKey": "browser-agent-connector",
-                        "name": "Browser Agent Connector",
+                        "name": "Tabgent",
                         "roots": [{"path": str(workspace)}],
                     },
                 )

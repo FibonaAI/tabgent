@@ -771,8 +771,8 @@ async function initialize() {
   try {
     await rpc('initialize', {
       clientInfo: {
-        name: 'browser-agent-connector_browser',
-        title: 'Browser Agent Connector',
+        name: 'tabgent_browser',
+        title: 'Tabgent',
         version: '0.1.0',
       },
       capabilities: { experimentalApi: true },

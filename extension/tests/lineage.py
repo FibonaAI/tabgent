@@ -15,7 +15,7 @@ def fixture_rpc(self, method, params=None):
         return {'requiresOpenaiAuth': False}
     return real_rpc(self, method, params)
 
-with patch.object(host.Session, 'rpc', fixture_rpc), tempfile.TemporaryDirectory(prefix='bac-lineage-') as directory, patch.object(host, 'HOME', Path(directory)), patch.object(host, 'send', lambda _: None):
+with patch.object(host.Session, 'rpc', fixture_rpc), tempfile.TemporaryDirectory(prefix='tabgent-lineage-') as directory, patch.object(host, 'HOME', Path(directory)), patch.object(host, 'send', lambda _: None):
     home = Path(directory)
     parent, child = host.Session('parent', {}), host.Session('child', {})
     try:

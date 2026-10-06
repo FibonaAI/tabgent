@@ -5,7 +5,7 @@ const fs = require('fs'),
 const root = process.cwd(),
   { chromium } = require(root + '/node_modules/playwright');
 (async () => {
-  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'bac-input-audit-'));
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'tabgent-input-audit-'));
   let browser;
   try {
     const ext = path.join(temp, 'extension');

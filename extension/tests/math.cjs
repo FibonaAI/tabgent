@@ -52,7 +52,7 @@ const { chromium } = require('playwright');
     assert.equal((await page.locator('annotation').first().textContent()).trim(), equation.trim());
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({
-      path: '/tmp/bac-math-preview.png',
+      path: '/tmp/tabgent-math-preview.png',
       clip: { x: 0, y: 0, width: 400, height: 180 },
     });
     await render('Inline $x^2$ and $y$; prices $5 and $10.\n\n$$\\frac{1}{2}$$');

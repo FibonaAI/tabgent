@@ -1,5 +1,5 @@
 {
-  "name": "browser-agent-connector",
+  "name": "tabgent",
   "version": "0.1.0",
   "private": true,
   "description": "Bring Codex into Chrome: one conversation per tab, live page context, and scoped browser tools.",

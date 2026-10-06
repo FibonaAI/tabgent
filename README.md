@@ -1,10 +1,12 @@
 <p align="center">
-  <img src="extension/icons/app-128.png" width="64" alt="Browser Agent Connector logo">
+  <img src="extension/icons/app-128.png" width="64" alt="Tabgent logo">
 </p>
 
-# Browser Agent Connector
+# Tabgent
 
-**Read, research, and get things done with Codex—right beside your tabs.**
+**Your agent in every tab.**
+
+Read, research, and get things done with Codex—right beside your tabs.
 
 A Chrome sidebar with page context, visible tool activity, and a prewarmed Codex session for less waiting when you start a new conversation.
 
@@ -44,12 +46,12 @@ Type **/** to choose a skill, set a goal, switch models or enter Plan mode. Expa
 
 The [official ChatGPT/Codex browser extension](https://learn.chatgpt.com/docs/chrome-extension) also offers side chat, selected-text context, and browser control. This project focuses on a customizable Codex workflow inside Chrome:
 
-| What you want                       | Browser Agent Connector                                                                            |
+| What you want                       | Tabgent                                                                            |
 | ----------------------------------- | -------------------------------------------------------------------------------------------------- |
 | Discuss PDFs                        | Quote a passage from Chrome’s PDF viewer, or attach a PDF for page-by-page text reading.           |
 | Less waiting to start               | Keeps a spare app-server session and, when signed in, a thread prewarmed.                          |
 | More room for the same conversation | Open a full Agent tab; messages, drafts, and attachments stay synchronized with the sidebar.       |
-| A fresh take on the same page       | **+** creates an empty Agent tab with the same webpage, model, reasoning effort, and access scope. |
+| A fresh take on the same page       | **+** starts a new chat in place, keeping the same webpage and settings. |
 | Control over the experience         | Open-source UI and connector; choose the model, reasoning effort, and window/browser scope.        |
 
 Prewarming reduces startup work; it does not make model responses faster. No head-to-head speed benchmark is claimed. The official extension offers desktop-linked chats and broader app integrations; this project does not synchronize live conversations with Codex Desktop.
@@ -63,7 +65,7 @@ Requires **macOS, Python 3.9+, Chrome 142+, and Codex installed and signed in**.
 Copy this into your Codex chat:
 
 ```text
-Install Browser Agent Connector for me from:
+Install Tabgent for me from:
 https://github.com/FibonaAI/browser-agent-connector
 
 Check that this Mac has Python 3.9+, Chrome 142+, and a compatible Codex
@@ -73,7 +75,7 @@ python3 extension/native/install.py from the repository root.
 
 Use my existing CODEX_HOME and Codex sign-in. Open chrome://extensions,
 enable Developer mode, load the installed extension from
-${CODEX_HOME:-$HOME/.codex}/plugins/browser-agent-connector/extension,
+${CODEX_HOME:-$HOME/.codex}/plugins/tabgent/extension,
 and pin it. Use browser controls if available; otherwise guide me through
 only the remaining clicks. Keep my existing Chrome profile and tabs.
 
@@ -87,7 +89,7 @@ The repository is currently private; your GitHub account needs access. Chrome lo
 ### Install manually
 
 1. Download this repository and double-click **Install.command**.
-2. Open `chrome://extensions`, enable **Developer mode**, then **Load unpacked** → `~/.codex/plugins/browser-agent-connector/extension`.
+2. Open `chrome://extensions`, enable **Developer mode**, then **Load unpacked** → `~/.codex/plugins/tabgent/extension`.
 3. Pin the extension and click its icon. Start chatting beside any webpage.
 
 [Installation help](docs/installation.md) · [Privacy & permissions](docs/privacy.md) · [Development](docs/development.md) · [Contributing](CONTRIBUTING.md)

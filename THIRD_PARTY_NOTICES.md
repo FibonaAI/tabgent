@@ -1,6 +1,6 @@
 # Third-party notices
 
-The project license applies to original Browser Agent Connector code and assets.
+The project license applies to original Tabgent code and assets.
 
 Playwright and Prettier are development dependencies, not bundled extension
 runtime libraries. Their packages include their respective license notices.

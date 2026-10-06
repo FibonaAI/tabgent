@@ -35,10 +35,12 @@ A native new tab may be navigated to an HTTP(S) page without inspecting its UI.
 ## Storage
 
 All Codex paths respect `CODEX_HOME`; the default is `~/.codex`.
+The workspace directory keeps its original `browser-agent-connector` identifier
+so existing conversations, lineage records, and attachment paths remain valid.
 
 | Location                                        | Contents                                                                |
 | ----------------------------------------------- | ----------------------------------------------------------------------- |
-| `plugins/browser-agent-connector/`              | Installed connector and, for normal installations, extension files.     |
+| `plugins/tabgent/`              | Installed connector and, for normal installations, extension files.     |
 | `projects/browser-agent-connector/attachments/` | User-uploaded file copies, each in a generated subdirectory.            |
 | Shared Codex session storage and index          | Conversation history and project association.                           |
 | Chrome extension session storage                | Tab bindings, selection drafts, text drafts, and attachment references. |

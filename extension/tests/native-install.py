@@ -8,14 +8,14 @@ path = Path(__file__).resolve().parents[1] / "native/host.py"
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "native"))
-spec = importlib.util.spec_from_file_location("browser-agent-connector_host", path)
+spec = importlib.util.spec_from_file_location("tabgent_host", path)
 host = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(host)
 exe = host.executable()
 assert exe, "A local Codex binary is required for the recovery half of this test"
 messages = queue.Queue()
 with tempfile.TemporaryDirectory(
-    prefix="browser-agent-connector-install-test-"
+    prefix="tabgent-install-test-"
 ) as directory, patch.object(host, "HOME", Path(directory)), patch.object(
     host, "send", messages.put
 ):

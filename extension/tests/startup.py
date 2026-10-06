@@ -25,7 +25,7 @@ def emit(message):
     if message.get('message', {}).get('method') == 'bridge/ready':
         ready.add(message['session'])
 
-with tempfile.TemporaryDirectory(prefix='bac-startup-') as directory, \
+with tempfile.TemporaryDirectory(prefix='tabgent-startup-') as directory, \
         patch.object(host, 'HOME', Path(directory)), \
         patch.object(host, 'send', emit), \
         patch.object(host.Session, 'rpc', rpc), \

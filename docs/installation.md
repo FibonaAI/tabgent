@@ -15,7 +15,7 @@ From the repository root, run `python3 extension/native/install.py` or double-cl
 `Install.command`. Load the installed directory in `chrome://extensions`:
 
 ```text
-~/.codex/plugins/browser-agent-connector/extension
+~/.codex/plugins/tabgent/extension
 ```
 
 Enable Developer mode and choose Load unpacked. Pin the extension, then click
@@ -68,9 +68,9 @@ also respects `CODEX_HOME` when opening the installed extension folder.
 ## Uninstall
 
 Remove the extension in Chrome. Delete the registration file named
-`com.browser_agent_connector.codex.json` from the relevant browser's
+`com.tabgent.codex.json` from the relevant browser's
 `~/Library/Application Support/<browser>/NativeMessagingHosts/` directory.
-You may then remove `~/.codex/plugins/browser-agent-connector`.
+You may then remove `~/.codex/plugins/tabgent`.
 
 The shared Codex conversation history and uploaded files in the project directory
 are retained. Do not delete the entire Codex home to uninstall this extension.

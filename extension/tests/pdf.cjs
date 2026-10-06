@@ -5,7 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { chromium } = require('playwright');
 (async () => {
-  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'bac-pdf-'));
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'tabgent-pdf-'));
   const ext = path.join(temp, 'extension');
   fs.mkdirSync(ext);
   for (const name of ['pdf', 'vendor', '_locales'])
@@ -136,7 +136,7 @@ chrome.runtime.onMessage.addListener((m,s,reply)=>{
       fs.readFileSync(file).includes(Buffer.from('/Subtype /Highlight')),
       'Highlight persisted in downloaded PDF',
     );
-    await page.screenshot({ path: '/tmp/bac-pdf-viewer.png' });
+    await page.screenshot({ path: '/tmp/tabgent-pdf-viewer.png' });
     console.log(
       'PASS PDF automatic redirect, original context, reading, live quote with coordinates, Agent selection/highlight and annotated export',
     );

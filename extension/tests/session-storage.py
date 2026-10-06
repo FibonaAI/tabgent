@@ -12,7 +12,7 @@ spec = importlib.util.spec_from_file_location(
 host = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(host)
 with tempfile.TemporaryDirectory(
-    prefix="browser-agent-connector-storage-"
+    prefix="tabgent-storage-"
 ) as directory, patch.object(host, "HOME", Path(directory)), patch.object(
     host, "send", lambda _: None
 ):
@@ -41,7 +41,7 @@ with tempfile.TemporaryDirectory(
         assert params["approvalPolicy"] == "untrusted"
         assert first.project_id == second.project_id
         project = first.rpc("project/read", {"projectId": first.project_id})["project"]
-        assert project["name"] == "Browser Agent Connector"
+        assert project["name"] == "Tabgent"
         thread = first.rpc("thread/start", first.thread_params({}))["thread"]
         assert thread["projectId"] == first.project_id
         assert thread["cwd"] == str(

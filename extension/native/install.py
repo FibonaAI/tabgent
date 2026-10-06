@@ -19,7 +19,7 @@ ext_id = "".join(
     chr(ord("a") + int(c, 16)) for c in hashlib.sha256(key).hexdigest()[:32]
 )
 codex_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")).resolve()
-home = codex_home / "plugins/browser-agent-connector"
+home = codex_home / "plugins/tabgent"
 home.mkdir(parents=True, exist_ok=True)
 os.chmod(home, 0o700)
 # Chrome-launched helpers must live outside macOS protected Documents folders.
@@ -39,8 +39,8 @@ launcher.write_text(
 )
 launcher.chmod(0o700)
 data = {
-    "name": "com.browser_agent_connector.codex",
-    "description": "Browser Agent Connector local Codex connector",
+    "name": "com.tabgent.codex",
+    "description": "Tabgent local Codex connector",
     "path": str(launcher),
     "type": "stdio",
     "allowed_origins": ["chrome-extension://" + ext_id + "/"],
@@ -56,7 +56,7 @@ for directory in [
         Path.home() / "Library/Application Support" / directory / "NativeMessagingHosts"
     )
     dest.mkdir(parents=True, exist_ok=True)
-    (dest / "com.browser_agent_connector.codex.json").write_text(
+    (dest / "com.tabgent.codex.json").write_text(
         json.dumps(data, indent=2) + "\n"
     )
 print("Connector installed. Extension ID: " + ext_id)

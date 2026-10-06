@@ -71,7 +71,7 @@ Never point integration tests at a personal browser with important tabs or draft
 npm run package
 ```
 
-The result is `dist/Browser-Agent-Connector-macOS.zip`. Packaging includes the
+The result is `dist/Tabgent-macOS.zip`. Packaging includes the
 extension runtime, Python connector, installation entry point, documentation,
 and licenses. It also includes the development scripts and tests so the archive can be inspected
 and developed independently. Dependencies, local profiles, credentials, and caches are excluded. No signing, publishing, or Git commit is performed.

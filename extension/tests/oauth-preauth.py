@@ -5,7 +5,7 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 with tempfile.TemporaryDirectory(
-    prefix="browser-agent-connector-oauth-preauth-"
+    prefix="tabgent-oauth-preauth-"
 ) as directory:
     home = Path(directory)
     (home / "auth.json").symlink_to(home / "isolated-auth.json")

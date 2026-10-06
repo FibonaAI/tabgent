@@ -278,8 +278,8 @@ function pageAction(args) {
   const visible = (el) =>
     el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden';
   if (args.action === 'read') {
-    for (const el of query('[data-browser-agent-connector-ref]'))
-      el.removeAttribute('data-browser-agent-connector-ref');
+    for (const el of query('[data-tabgent-ref]'))
+      el.removeAttribute('data-tabgent-ref');
     const prefix = crypto.randomUUID().slice(0, 8);
     const elements = query(
       'a,button,input,textarea,select,[role="button"],[role="checkbox"],[role="combobox"],[contenteditable="true"],canvas,iframe',
@@ -288,10 +288,10 @@ function pageAction(args) {
       .slice(0, 180);
     const controls = elements.map((el, i) => {
       const ref = `${prefix}-${i}`;
-      el.dataset.browserAgentConnectorRef = ref;
+      el.dataset.tabgentRef = ref;
       const r = el.getBoundingClientRect();
       return {
-        selector: `[data-browser-agent-connector-ref="${ref}"]`,
+        selector: `[data-tabgent-ref="${ref}"]`,
         tag: el.tagName,
         role: el.getAttribute('role'),
         text: (

@@ -236,7 +236,7 @@ chrome.webNavigation.onCreatedNavigationTarget?.addListener(async ({ sourceTabId
 });
 function connect() {
   if (native) return native;
-  native = chrome.runtime.connectNative('com.browser_agent_connector.codex');
+  native = chrome.runtime.connectNative('com.tabgent.codex');
   native.onMessage.addListener((message) => void receive(message));
   native.onDisconnect.addListener(() => {
     const message = chrome.runtime.lastError?.message || '';

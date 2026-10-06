@@ -296,7 +296,7 @@
     "message": "Codex detected"
   },
   "extensionName": {
-    "message": "Browser Agent Connector"
+    "message": "Tabgent"
   },
   "extensionDescription": {
     "message": "Codex chats in new tabs, alongside your pages, with scoped browser tools."
