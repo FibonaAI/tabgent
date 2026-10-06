@@ -39,7 +39,9 @@ export async function browserTool(session, args, readPdf) {
     args.y = Number(point[2]);
     delete args.selector;
   }
-  const id = args.tabId ?? session.tabId;
+  if (!Number.isInteger(args.tabId))
+    throw Error('An explicit tabId is required for every browser action');
+  const id = args.tabId;
   if (busyTabs.has(id))
     throw Error('Another browser operation is running in this tab; retry sequentially');
   busyTabs.add(id);
@@ -50,8 +52,10 @@ export async function browserTool(session, args, readPdf) {
   }
 }
 async function operate(session, args, id, readPdf) {
-  if (args.action === 'context') return context(session);
   const tabs = await available(session);
+  if (!tabs.some((tab) => tab.id === id))
+    throw Error('Tab is outside the selected scope or is a protected page');
+  if (args.action === 'context') return context({ ...session, tabId: id, noCompanion: false });
   if (args.action === 'tabs')
     return tabs.map(pdfTab).map(({ id, windowId, title, url, active }) => ({
       id,
@@ -60,7 +64,7 @@ async function operate(session, args, id, readPdf) {
       url,
       active,
     }));
-  const owner = await chrome.tabs.get(session.tabId);
+  const owner = await chrome.tabs.get(id);
   const url = () => {
     const value = new URL(args.url);
     if (!['http:', 'https:'].includes(value.protocol)) throw Error('Only HTTP(S) URLs are allowed');

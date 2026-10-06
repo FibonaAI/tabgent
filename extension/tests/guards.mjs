@@ -17,7 +17,7 @@ globalThis.chrome = {
   },
 };
 await assert.rejects(
-  browserTool({ tabId: 1, scope: 'window' }, { action: 'screenshot' }),
+  browserTool({ tabId: 1, scope: 'window' }, { tabId: 1, action: 'screenshot' }),
   /Already attached/,
 );
 assert.equal(scripts, 0, 'Native input must not inject obsolete overlay code');
@@ -26,18 +26,21 @@ await assert.rejects(
   /outside/,
 );
 await assert.rejects(
-  browserTool({ tabId: 1, scope: 'window' }, { action: 'navigate', url: 'javascript:alert(1)' }),
+  browserTool(
+    { tabId: 1, scope: 'window' },
+    { tabId: 1, action: 'navigate', url: 'javascript:alert(1)' },
+  ),
   /HTTP/,
 );
 console.log('PASS screenshot failure / no overlay injection / restricted tab / URL guards');
 
 owner.url = 'chrome://new-tab-page/';
 assert.equal(
-  (await browserTool({ tabId: 1, scope: 'window' }, { action: 'read' })).protected,
+  (await browserTool({ tabId: 1, scope: 'window' }, { tabId: 1, action: 'read' })).protected,
   true,
 );
 await assert.rejects(
-  browserTool({ tabId: 1, scope: 'window' }, { action: 'click', x: 10, y: 10 }),
+  browserTool({ tabId: 1, scope: 'window' }, { tabId: 1, action: 'click', x: 10, y: 10 }),
   /internal pages/,
 );
 chrome.tabs.update = async (id, change) => ({ ...owner, ...change });
@@ -45,9 +48,12 @@ assert.equal(
   (
     await browserTool(
       { tabId: 1, scope: 'window' },
-      { action: 'navigate', url: 'https://example.test/' },
+      { tabId: 1, action: 'navigate', url: 'https://example.test/' },
     )
   ).url,
   'https://example.test/',
 );
 console.log('PASS native new tab allows navigation while protecting its internal UI');
+
+for (const action of ['read', 'context', 'tabs', 'open', 'click'])
+  await assert.rejects(browserTool({ tabId: 1, scope: 'window' }, { action }), /explicit tabId/);

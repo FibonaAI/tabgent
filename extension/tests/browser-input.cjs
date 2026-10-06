@@ -40,7 +40,7 @@ const { chromium } = require('playwright');
     control.evaluate(
       async ({ id, args }) => {
         const { browserTool } = await import('./browser-tools.js');
-        return browserTool({ tabId: id, scope: 'window' }, args);
+        return browserTool({ tabId: id, scope: 'window' }, { tabId: id, ...args });
       },
       { id, args },
     );

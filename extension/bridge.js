@@ -99,6 +99,7 @@ export async function openRelatedThread(threadId) {
   const result = await chrome.runtime.sendMessage({
     type: 'openRelatedThread',
     conversationKey: state.conversationKey,
+    companionTabId: state.companionTabId,
     threadId,
   });
   if (result?.error) throw Error(result.error);
@@ -108,6 +109,7 @@ export async function openConversationLink(url, active) {
   const result = await chrome.runtime.sendMessage({
     type: 'openConversationLink',
     conversationKey: state.conversationKey,
+    companionTabId: state.companionTabId,
     url,
     active,
   });
@@ -119,6 +121,7 @@ export async function newConversation(settings) {
   const result = await chrome.runtime.sendMessage({
     type: 'newConversation',
     conversationKey: state.conversationKey,
+    companionTabId: state.companionTabId,
     settings,
     windowId: state.windowId,
   });
@@ -129,6 +132,7 @@ export async function openAgentTab() {
   const result = await chrome.runtime.sendMessage({
     type: 'openAgent',
     conversationKey: state.conversationKey,
+    companionTabId: state.companionTabId,
     windowId: state.windowId,
   });
   if (result.error) throw Error(result.error);
@@ -138,6 +142,7 @@ export async function pageHistory(threadId) {
   const result = await chrome.runtime.sendMessage({
     type: threadId ? 'switchHistory' : 'urlHistory',
     conversationKey: state.conversationKey,
+    companionTabId: state.companionTabId,
     threadId,
   });
   if (result?.error) throw Error(result.error);

@@ -58,6 +58,8 @@ globalThis.chrome = {
     },
   },
   tabs: {
+    query: async ({ windowId } = {}) =>
+      [...tabs.values()].filter((t) => windowId == null || t.windowId === windowId),
     get: async (id) => {
       if (!tabs.has(id)) throw Error('Missing tab');
       return tabs.get(id);
@@ -134,7 +136,7 @@ await native.onMessage.emit({
   message: {
     id: 901,
     method: 'item/tool/call',
-    params: { tool: 'browser', arguments: { action: 'context' } },
+    params: { tool: 'browser', arguments: { action: 'context', tabId: 1 } },
   },
 });
 await new Promise((resolve) => setTimeout(resolve, 0));
@@ -149,7 +151,7 @@ await native.onMessage.emit({
 assert.equal(sidebar.messages.at(-1).value.params.delta, 'Hello');
 assert.equal(full.messages.at(-1).value.params.delta, 'Hello');
 await sidebar.send({ type: 'ui', name: 'codexScope', args: ['browser'] });
-const copiedSettings = { model: 'test-model', effort: 'high', mode: 'plan' };
+const copiedSettings = { model: 'test-model', effort: 'high', mode: 'plan', permissionMode: 'ask' };
 const fresh = await call({
   type: 'newConversation',
   conversationKey: 1,
@@ -173,6 +175,24 @@ assert.equal(linkCalls.length, 0, 'Agent + copies settings without creating line
 assert.equal(
   saved.conversations.find(([key]) => key === freshState.conversationKey)[1].parent,
   undefined,
+);
+async function submitMessage(view, sessionId) {
+  await view.send({
+    type: 'ui',
+    name: 'codexRpc',
+    args: [{ id: 878, method: 'turn/steer', params: { input: [{ type: 'text', text: 'Test' }] } }],
+  });
+  const request = sent.at(-1);
+  await native.onMessage.emit({
+    session: sessionId,
+    message: { id: request.message.id, result: { turnId: 'test' } },
+  });
+}
+assert.equal((await call({ type: 'urlHistory', conversationKey: 1 })).entries.length, 0);
+await submitMessage(sidebar, session.id);
+await submitMessage(
+  freshView,
+  saved.conversations.find(([key]) => key === freshState.conversationKey)[1].id,
 );
 const historyList = await call({ type: 'urlHistory', conversationKey: 1 });
 assert.equal(historyList.entries.length, 2, 'Both chats belong to the same URL');
@@ -199,6 +219,71 @@ assert(
   ).error,
 );
 assert.equal((await attach(1)).messages[0].state.threadId, 'thread-one');
+const otherPage = await chrome.tabs.create({ url: 'https://example.test/', windowId: 2 });
+await attach(otherPage.id);
+assert(
+  !(
+    await call({
+      type: 'switchHistory',
+      conversationKey: otherPage.id,
+      companionTabId: otherPage.id,
+      threadId: 'thread-one',
+    })
+  ).error,
+);
+const otherView = await attach(otherPage.id);
+assert.equal(otherView.messages[0].state.threadId, 'thread-one');
+await otherView.send({ type: 'ui', name: 'codexContext' });
+assert.equal(otherView.messages.at(-1).value.page.id, otherPage.id);
+await sidebar.send({ type: 'ui', name: 'codexContext' });
+assert.equal(
+  sidebar.messages.at(-1).value.page.id,
+  1,
+  'A shared thread must not overwrite another composer binding',
+);
+await otherView.send({
+  type: 'ui',
+  name: 'codexRpc',
+  args: [
+    {
+      id: 879,
+      method: 'thread/queue/add',
+      params: { input: [{ type: 'text', text: 'From the other tab' }] },
+    },
+  ],
+});
+const queuedContext = sent.at(-1).message.params.input[0];
+assert.equal(JSON.parse(queuedContext.text.split('\n')[1]).tabId, otherPage.id);
+await sidebar.send({
+  type: 'ui',
+  name: 'codexRpc',
+  args: [
+    {
+      id: 880,
+      method: 'turn/steer',
+      params: { input: [queuedContext, { type: 'text', text: 'Queued message' }] },
+    },
+  ],
+});
+assert.equal(
+  JSON.parse(sent.at(-1).message.params.input[0].text.split('\n')[1]).tabId,
+  otherPage.id,
+  'Queued steering retains the original page',
+);
+await native.onMessage.emit({
+  session: session.id,
+  message: { id: sent.at(-1).message.id, result: { turnId: 'queued-turn' } },
+});
+await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(
+  saved.conversations.find(([key]) => key === 1)[1].toolTabId,
+  otherPage.id,
+  'Accepted queued input anchors browser scope to its original tab',
+);
+tabs.delete(otherPage.id);
+await chrome.tabs.onRemoved.emit(otherPage.id);
+console.log('PASS per-composer page binding / message tabId / queued tabId preservation');
+
 const freshSession = saved.conversations.find(([key]) => key === freshState.conversationKey)[1];
 tabs.delete(fresh.tabId);
 await chrome.tabs.onRemoved.emit(fresh.tabId);
@@ -438,6 +523,7 @@ await newConversation(copiedSettings);
 assert.equal(openedWindow, undefined);
 assert.deepEqual(uiCalls.at(-1), {
   type: 'newConversation',
+  companionTabId: undefined,
   windowId: 2,
   conversationKey: 10,
   settings: copiedSettings,

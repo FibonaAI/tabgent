@@ -701,12 +701,63 @@
     "message": "Copied"
   },
   "pageHistory": {
-    "message": "Page conversations"
+    "message": "Page chats"
   },
   "closeHistory": {
     "message": "Close conversation history"
   },
   "historyEmpty": {
     "message": "No conversations for this page yet."
+  },
+  "historyThisPage": {
+    "message": "This page"
+  },
+  "historyToday": {
+    "message": "Today"
+  },
+  "historyYesterday": {
+    "message": "Yesterday"
+  },
+  "historyEarlier": {
+    "message": "Earlier"
+  },
+  "historyJustNow": {
+    "message": "Just now"
+  },
+  "permissions": {
+    "message": "Permissions"
+  },
+  "permissionQuestion": {
+    "message": "How should actions be approved?"
+  },
+  "permissionAsk": {
+    "message": "Ask for approval"
+  },
+  "permissionAskHint": {
+    "message": "Ask before operations outside read-only access."
+  },
+  "permissionAuto": {
+    "message": "Approve for me"
+  },
+  "permissionAutoHint": {
+    "message": "Let Codex review requests based on risk."
+  },
+  "permissionFull": {
+    "message": "Full access"
+  },
+  "permissionFullHint": {
+    "message": "Unrestricted file and network access."
+  },
+  "selectModel": {
+    "message": "Select model"
+  },
+  "scopeQuestion": {
+    "message": "Which browser tabs can Agent control?"
+  },
+  "scopeWindowExplanation": {
+    "message": "Access tabs in the window containing this message’s page."
+  },
+  "scopeBrowserExplanation": {
+    "message": "Access tabs across all windows in this browser profile."
   }
 }

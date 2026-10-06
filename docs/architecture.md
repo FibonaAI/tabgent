@@ -132,3 +132,21 @@ the stored thread ID when it is no longer active. It does not create lineage. Dr
 and attachments stay with their sessions. The index survives browser restarts, but
 clearing extension data removes it. Existing open sessions are indexed on first use;
 closed conversations predating this feature cannot be reconstructed reliably.
+
+Only threads with an accepted user message enter page history. Merely opening or
+cloning a chat and injected lineage notes do not qualify. Older index entries are
+checked against Codex history on first access; empty entries are removed from the
+index, while unavailable records remain hidden for a later retry.
+
+
+## Per-message browser context
+
+Each Agent view retains its own companion tab, independently of its shared thread.
+The connector prepends a text context item (tab ID, window ID, URL, title) to each
+submitted message. Queued messages retain this snapshot when started or steered
+from another view. The UI hides this routing item and continues showing the bound
+page in the composer. Page titles and URLs are treated as untrusted data.
+
+Every browser action requires an explicit `tabId`, including `context`, `tabs`, and
+`open` (where it identifies the source window's tab). Missing IDs fail validation;
+there is no implicit target. The message's originating tab anchors window scope.

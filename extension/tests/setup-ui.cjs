@@ -36,7 +36,7 @@ export const bridge={threadId:null,send(name,args=[]){
  if(m.method==='bridge/thread/relations')result=window.setupTest.relations||{parents:[],children:[]};
  if(m.method==='account/read')result={account:authenticated?{type:'chatgpt'}:null,requiresOpenaiAuth:true};
  if(m.method==='account/login/start')result={loginId:'test-login',authUrl:'https://auth.openai.com/test-only'};
- if(m.method==='model/list')result={data:[{model:'test-model',displayName:'Test model',isDefault:true,supportedReasoningEfforts:[{reasoningEffort:'medium'}]}]};
+ if(m.method==='model/list')result={data:[{model:'test-model',displayName:'Test model',isDefault:true,supportedReasoningEfforts:[{reasoningEffort:'low'},{reasoningEffort:'medium'},{reasoningEffort:'high'}]}]};
  if(m.method==='bridge/attachment/save')result={path:'/uploads/'+m.params.name};
  if(m.method==='thread/start'||m.method==='thread/resume')result={thread:{id:'test-thread',turns:[]}};
  setTimeout(()=>{
@@ -135,6 +135,64 @@ export function saveScopePreference(){}
           () => document.querySelector('#connection').dataset.state === 'ready',
         );
         assert.equal(await page.locator('#relations').count(), 0);
+        async function assertAnchored(menuId, buttonId) {
+          const menu = await page.locator(menuId).boundingBox();
+          const button = await page.locator(buttonId).boundingBox();
+          const width = page.viewportSize().width;
+          assert(
+            Math.abs(menu.y + menu.height + 8 - button.y) < 2,
+            'Menu follows its button vertically',
+          );
+          assert(menu.x >= 11 && menu.x + menu.width <= width - 11, 'Menu stays inside viewport');
+          assert(
+            Math.abs(menu.x - Math.max(12, Math.min(button.x, width - menu.width - 12))) < 2,
+            'Menu follows button horizontally',
+          );
+        }
+        await page.locator('#modelButton').click();
+        await assertAnchored('#modelMenu', '#modelButton');
+        await page.setViewportSize({ width: 390, height: 720 });
+        await assertAnchored('#modelMenu', '#modelButton');
+        await page.setViewportSize({ width: 1280, height: 720 });
+        await assertAnchored('#modelMenu', '#modelButton');
+
+        assert(await page.locator('#effortRange').isVisible());
+        await page.locator('#modelMenu').screenshot({ path: '/tmp/bac-model-menu.png' });
+        await page.locator('#modelMenuHeader').click();
+        await assertAnchored('#modelMenu', '#modelButton');
+        assert.equal(await page.locator('#modelOptions button').count(), 1);
+        assert.equal(await page.locator('#modelOptions button').first().innerText(), 'Test model');
+        await page.locator('#modelOptions button').first().click();
+        await page.locator('#permissionButton').click();
+        await assertAnchored('#permissionMenu', '#permissionButton');
+        await page.setViewportSize({ width: 390, height: 720 });
+        await assertAnchored('#permissionMenu', '#permissionButton');
+        await page.setViewportSize({ width: 1280, height: 720 });
+        await page.locator('#permissionMenu').screenshot({ path: '/tmp/bac-permission-menu.png' });
+        await page.locator('[data-mode="auto"]').click();
+        await page.waitForFunction(
+          () => document.querySelector('#permissionLabel').textContent === 'Approve for me',
+        );
+        assert(
+          (await page.evaluate(() => setupTest.requests)).some(
+            (r) => r.method === 'bridge/permissions/set' && r.params.mode === 'auto',
+          ),
+        );
+
+        await page.locator('#scopeButton').click();
+        await assertAnchored('#scopeMenu', '#scopeButton');
+        assert.equal(await page.locator('#scopeOptions button').count(), 2);
+        assert.equal(
+          await page.locator('[data-scope="window"]').getAttribute('aria-checked'),
+          'true',
+        );
+        assert(
+          (await page.locator('[data-scope="browser"] small').innerText()).includes('all windows'),
+        );
+        await page.locator('[data-scope="browser"]').click();
+        assert.equal(await page.locator('#scope').inputValue(), 'browser');
+        await page.locator('#scopeButton').click();
+        await page.locator('[data-scope="window"]').click();
         await page.locator('#historyToggle').click();
         await page.waitForSelector('.history-entry');
         assert.equal(await page.locator('.history-entry').count(), 2);
@@ -142,6 +200,10 @@ export function saveScopePreference(){}
           await page.locator('.history-entry[aria-current="true"] span').innerText(),
           'Current conversation',
         );
+        assert.equal(await page.locator('.history-entry small').count(), 2);
+        assert(!(await page.locator('.history-entry small').first().innerText()).includes('PM'));
+        assert.equal(await page.locator('.history-date').innerText(), 'Earlier');
+        await page.locator('#historyPanel').screenshot({ path: '/tmp/bac-history-refined.png' });
         await page.locator('.history-entry').last().click();
         assert.equal(
           (await page.evaluate(() => setupTest.actions.at(-1))).threadId,
@@ -605,8 +667,8 @@ export function saveScopePreference(){}
         assert.equal(await page.locator('#contextDetails').isVisible(), false);
         await page.setViewportSize({ width: 390, height: 720 });
         const controls = await Promise.all(
-          ['#attach', '#model', '#effort', '#scope', '#context'].map((selector) =>
-            page.locator(selector).boundingBox(),
+          ['#attach', '#modelButton', '#permissionButton', '#scopeButton', '#context'].map(
+            (selector) => page.locator(selector).boundingBox(),
           ),
         );
         const centers = controls.map((box) => box.y + box.height / 2);

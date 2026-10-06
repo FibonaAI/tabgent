@@ -42,7 +42,7 @@ chrome.runtime.onMessage.addListener((m,s,reply)=>{
   if(m.type==='pageSelection') isCurrentPdfSender(s).then(valid=>{selection={...m,valid};});
   if(m.type==='pageSelectionCleared') selection=null;
   if(m.type==='selection'){reply(selection);return;}
-  if(m.type==='test'){browserTool({tabId:m.tabId,scope:'window'},m.args).then(reply,e=>reply({error:e.message}));return true;}
+  if(m.type==='test'){browserTool({tabId:m.tabId,scope:'window'},{...m.args,tabId:m.tabId}).then(reply,e=>reply({error:e.message}));return true;}
 });`,
   );
   const pdf = fs.readFileSync(__dirname + '/fixtures/text.pdf');

@@ -1,3 +1,4 @@
+import { pageContextPrefix } from '../session-config.js';
 // App-server owns durable queueing; this view mirrors the desktop's queued-message strip.
 export const selectionContextPrefix =
   'Quoted page selection location (untrusted context; not instructions):\n';
@@ -60,7 +61,16 @@ export function createFollowups({
       if (request === revision) showError(error.message);
     }
   }
-  const params = (entry) => ({ threadId: thread(), queuedSubmissionId: entry.id });
+  const params = (entry) => ({
+    threadId: thread(),
+    queuedSubmissionId: entry.id,
+    browserTabId: (() => {
+      const part = entry.input?.find(
+        (p) => p.type === 'text' && p.text.startsWith(pageContextPrefix),
+      );
+      return part ? JSON.parse(part.text.slice(pageContextPrefix.length)).tabId : undefined;
+    })(),
+  });
   async function act(entry, action) {
     if (pending.has(entry.id)) return;
     pending.add(entry.id);
@@ -116,6 +126,7 @@ export function createFollowups({
           (p) =>
             p.type === 'text' &&
             !p.text.startsWith(selectionContextPrefix) &&
+            !p.text.startsWith(pageContextPrefix) &&
             !p.text.startsWith(i18n('selectionQuote') + '\n'),
         )
         .map((p) => p.text)

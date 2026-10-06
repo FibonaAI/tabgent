@@ -11,7 +11,25 @@
     <aside id="historyPanel" hidden aria-label="$i18n{pageHistory}">
       <div class="history-heading">
         <strong>$i18n{pageHistory}</strong
-        ><button id="historyClose" aria-label="$i18n{closeHistory}">×</button>
+        ><button
+          id="historyClose"
+          class="icon-button"
+          aria-label="$i18n{closeHistory}"
+          title="$i18n{closeHistory}"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="4" width="18" height="16" rx="3" />
+            <path d="M9 4v16m7-7-3 3 3 3" />
+          </svg>
+        </button>
       </div>
       <p id="historyUrl"></p>
       <div id="historyList"></div>
@@ -106,6 +124,32 @@
       </section>
       <section id="messages" aria-label="$i18n{messagesLabel}"></section>
     </main>
+    <div id="modelMenu" class="composer-menu" popover>
+      <button id="modelMenuHeader">
+        <span id="selectedModel"></span><span id="selectedEffort"></span
+        ><span aria-hidden="true">›</span>
+      </button>
+      <div id="effortControl">
+        <input
+          id="effortRange"
+          type="range"
+          min="0"
+          max="1"
+          step="1"
+          aria-label="$i18n{effortLabel}"
+        />
+        <div id="effortTicks" aria-hidden="true"></div>
+      </div>
+      <div id="modelOptions" hidden role="menu" aria-label="$i18n{modelLabel}"></div>
+    </div>
+    <div id="permissionMenu" class="composer-menu" popover>
+      <p>$i18n{permissionQuestion}</p>
+      <div id="permissionOptions" role="menu" aria-label="$i18n{permissions}"></div>
+    </div>
+    <div id="scopeMenu" class="composer-menu" popover>
+      <p>$i18n{scopeQuestion}</p>
+      <div id="scopeOptions" role="menu" aria-label="$i18n{scopeLabel}"></div>
+    </div>
     <footer>
       <button id="jump" aria-label="$i18n{jumpLatest}" hidden>↓</button>
       <div id="questions"></div>
@@ -153,14 +197,40 @@
                   stroke-linecap="round"
                 />
               </svg></button
-            ><select id="model" aria-label="$i18n{modelLabel}">
+            ><select hidden id="model" aria-label="$i18n{modelLabel}">
               <option value="">$i18n{defaultModel}</option></select
-            ><select id="effort" aria-label="$i18n{effortLabel}">
+            ><select hidden id="effort" aria-label="$i18n{effortLabel}">
               <option value="medium">$i18n{effortMedium}</option></select
+            ><button
+              id="permissionButton"
+              popovertarget="permissionMenu"
+              aria-label="$i18n{permissions}"
+            >
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m10 2 6 3v5c0 4-6 7-6 7s-6-3-6-7V5z" />
+                <path d="M10 6v4m0 3h.01" /></svg
+              ><span id="permissionLabel"></span></button
+            ><button id="modelButton" popovertarget="modelMenu" aria-label="$i18n{modelLabel}">
+              <span id="modelLabel"></span><span id="effortLabel"></span></button
             ><span class="settings-separator"></span
-            ><select id="scope" aria-label="$i18n{scopeLabel}" title="$i18n{scopeHint}">
+            ><select hidden id="scope" aria-label="$i18n{scopeLabel}" title="$i18n{scopeHint}">
               <option value="window">$i18n{scopeWindow}</option>
               <option value="browser">$i18n{scopeBrowser}</option></select
+            ><button
+              id="scopeButton"
+              popovertarget="scopeMenu"
+              aria-label="$i18n{scopeLabel}"
+              title="$i18n{scopeHint}"
+            >
+              <span id="scopeButtonLabel"></span></button
             ><button
               id="context"
               type="button"

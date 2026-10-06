@@ -92,6 +92,7 @@ class Session:
         self.thread_response = None
         self.populated = False
         self.auth = auth_stamp()
+        self.permission_mode = "ask"
         self.ready = False
         self.start_lock = threading.Lock()
         self.starting = False
@@ -303,14 +304,33 @@ class Session:
                 *(params.get("dynamicTools") or self.config.get("dynamicTools", [])),
                 attachments.TOOL,
             ],
-            "sandbox": "read-only",
-            "approvalPolicy": "untrusted",
+            "sandbox": "danger-full-access" if self.permission_mode == "full" else "read-only",
+            "approvalPolicy": "never" if self.permission_mode == "full" else "on-request" if self.permission_mode == "auto" else "untrusted",
+            "approvalsReviewer": "auto_review" if self.permission_mode == "auto" else "user",
             "historyMode": "legacy",
             "ephemeral": False,
         }
 
     def request(self, message, lineage_flushed=False):
         method = message.get("method")
+        if method == "bridge/permissions/set":
+            def set_permissions():
+                try:
+                    mode = message.get("params", {}).get("mode")
+                    if mode not in ("ask", "auto", "full") or not self.thread:
+                        raise ValueError("Invalid permission mode or unavailable conversation")
+                    self.rpc("thread/settings/update", {
+                        "threadId": self.thread["id"],
+                        "approvalPolicy": "never" if mode == "full" else "on-request" if mode == "auto" else "untrusted",
+                        "approvalsReviewer": "auto_review" if mode == "auto" else "user",
+                        "sandboxPolicy": {"type": "dangerFullAccess" if mode == "full" else "readOnly"},
+                    })
+                    self.permission_mode = mode
+                    self.emit({"id": message["id"], "result": {"mode": mode}})
+                except Exception as error:
+                    self.emit({"id": message["id"], "error": {"code": -32000, "message": str(error)}})
+            POOL.submit(set_permissions)
+            return
         if method == "bridge/thread/relations":
             def read_relations():
                 try:

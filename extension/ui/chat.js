@@ -1,3 +1,4 @@
+import { createComposerSettings } from './composer-settings.js';
 import { createRelations, isLineageNote } from './relations.js';
 import { createFollowups, selectionContextPrefix } from './followups.js';
 import { createCommands } from './commands.js';
@@ -119,7 +120,7 @@ function scheduleMessage(record) {
     if (follow) scrollEnd();
   });
 }
-import { tool, instructions } from '../session-config.js';
+import { tool, instructions, pageContextPrefix } from '../session-config.js';
 function showError(text) {
   if (!text) return;
   const last = $('messages').lastElementChild;
@@ -265,6 +266,15 @@ function markdown(target, text) {
   }
   target.replaceChildren(fragment);
 }
+const composerSettings = createComposerSettings({
+  i18n,
+  rpc,
+  bridge,
+  error: showError,
+  save: shareSettings,
+  thread: () => threadId,
+  ready: () => ready,
+});
 let historyRevision = 0;
 async function refreshHistory() {
   if ($('historyPanel').hidden) return;
@@ -272,19 +282,54 @@ async function refreshHistory() {
   try {
     const result = await pageHistory();
     if (revision !== historyRevision) return;
-    $('historyUrl').textContent = result.url;
+    $('historyUrl').textContent = result.url
+      ? new URL(result.url).hostname || i18n('historyThisPage')
+      : i18n('historyThisPage');
     $('historyUrl').title = result.url;
     $('historyList').replaceChildren();
+    let lastGroup;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
     for (const entry of result.entries) {
+      const group =
+        entry.updatedAt >= today.getTime()
+          ? 'historyToday'
+          : entry.updatedAt >= yesterday.getTime()
+            ? 'historyYesterday'
+            : 'historyEarlier';
+      if (group !== lastGroup) {
+        const heading = document.createElement('h3');
+        heading.className = 'history-date';
+        heading.textContent = i18n(group);
+        $('historyList').append(heading);
+        lastGroup = group;
+      }
       const button = document.createElement('button');
       button.className = 'history-entry';
       button.setAttribute('aria-current', String(entry.threadId === result.current));
       const name = document.createElement('span');
       name.textContent = entry.title || i18n('newChat');
-      button.title = name.textContent;
-      const date = document.createElement('small');
-      date.textContent = new Date(entry.updatedAt).toLocaleString();
-      button.append(name, date);
+      button.title = name.textContent + '\n' + new Date(entry.updatedAt).toLocaleString();
+      const time = document.createElement('small');
+      const age = Math.max(0, Date.now() - entry.updatedAt);
+      const relative = new Intl.RelativeTimeFormat('en', { style: 'short', numeric: 'auto' });
+      time.textContent =
+        age < 60000
+          ? i18n('historyJustNow')
+          : age < 3600000
+            ? relative.format(-Math.floor(age / 60000), 'minute')
+            : age < 86400000
+              ? relative.format(-Math.floor(age / 3600000), 'hour')
+              : new Date(entry.updatedAt).toLocaleDateString('en', {
+                  month: 'short',
+                  day: 'numeric',
+                  ...(new Date(entry.updatedAt).getFullYear() !== today.getFullYear()
+                    ? { year: 'numeric' }
+                    : {}),
+                });
+      button.append(name, time);
       button.onclick = async () => {
         if (entry.threadId === threadId) return;
         saveDraft();
@@ -311,6 +356,10 @@ function toggleHistory(open) {
   sessionStorage.setItem('historyOpen', String(open));
   if (open) void refreshHistory();
 }
+setInterval(() => {
+  if (!document.hidden) void refreshHistory();
+}, 60000);
+addWebUiListener('codex-history-changed', refreshHistory);
 $('historyToggle').onclick = () => toggleHistory($('historyPanel').hidden);
 $('historyClose').onclick = () => toggleHistory(false);
 if (sessionStorage.getItem('historyOpen') === 'true') toggleHistory(true);
@@ -607,6 +656,7 @@ function efforts() {
   select.value = [...select.options].some((o) => o.value === preferred)
     ? preferred
     : model?.defaultReasoningEffort || 'medium';
+  composerSettings.refresh();
 }
 function setupError(text = '') {
   $('setupError').textContent = text;
@@ -795,7 +845,9 @@ async function completeSetup() {
     } else {
       followups.pause(thread.turns?.at(-1)?.status === 'interrupted');
     }
+    await composerSettings.applySaved();
     ready = true;
+    composerSettings.refresh();
     void refreshHistory();
     void relations.refresh();
     commands.setMode(bridge.settings?.mode);
@@ -995,6 +1047,7 @@ const followups = createFollowups({
     let selection = null;
     const text = [];
     for (const part of entry.input) {
+      if (part.type === 'text' && part.text.startsWith(pageContextPrefix)) continue;
       if (part.type === 'text' && part.text.startsWith(selectionContextPrefix)) {
         selection = JSON.parse(part.text.slice(selectionContextPrefix.length));
       } else if (part.type === 'localImage' || part.type === 'mention') {
@@ -1509,6 +1562,7 @@ $('effort').onchange = () => {
   shareSettings();
 };
 function shareSettings() {
+  composerSettings.refresh();
   bridge.send('codexSettings', [
     { ...bridge.settings, model: $('model').value, effort: $('effort').value },
   ]);
@@ -1516,6 +1570,7 @@ function shareSettings() {
 addWebUiListener('codex-settings', (value) => {
   bridge.settings = value;
   commands.setMode(value.mode);
+  composerSettings.refresh();
   if (models.some((m) => m.model === value.model)) {
     $('model').value = value.model;
     efforts();
@@ -1523,6 +1578,7 @@ addWebUiListener('codex-settings', (value) => {
   }
 });
 $('scope').onchange = () => {
+  composerSettings.refresh();
   saveScopePreference($('scope').value);
   bridge.send('codexScope', [$('scope').value]);
 };
@@ -1538,6 +1594,7 @@ $('title').onchange = async () => {
   }
 };
 $('scope').value = scopePreference() || 'window';
+composerSettings.refresh();
 bridge.send('codexScope', [$('scope').value]);
 $('prompt').value = readViewDraft() || '';
 addWebUiListener('codex-draft', (text) => {
@@ -1589,7 +1646,11 @@ function renderUserInput(el, input) {
     node('div', lines.join('\n').replace(/^\n/, ''), quote);
   }
   for (const c of input) {
-    if (quotes.includes(c) || (c.type === 'text' && c.text.startsWith(selectionContextPrefix)))
+    if (
+      quotes.includes(c) ||
+      (c.type === 'text' &&
+        (c.text.startsWith(selectionContextPrefix) || c.text.startsWith(pageContextPrefix)))
+    )
       continue;
     if (c.type === 'text') node('div', c.text, el);
     else if (
@@ -1808,6 +1869,7 @@ addWebUiListener('codex-thread', (id) => {
 });
 addWebUiListener('codex-scope', (scope) => {
   $('scope').value = scope;
+  composerSettings.refresh();
   saveScopePreference(scope);
 });
 addWebUiListener('codex-question-answered', (id) => {
