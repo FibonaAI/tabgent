@@ -150,3 +150,11 @@ page in the composer. Page titles and URLs are treated as untrusted data.
 Every browser action requires an explicit `tabId`, including `context`, `tabs`, and
 `open` (where it identifies the source window's tab). Missing IDs fail validation;
 there is no implicit target. The message's originating tab anchors window scope.
+
+
+Agent-authored Markdown links can carry the exact title `browser:current` or
+`browser:new`. The Agent chooses using task context; the renderer converts the
+marker into a localized hover hint and click intent. Missing or unknown markers
+open a new tab. Modified clicks always request a new tab. Current-tab navigation
+uses the clicking view's companion page, preserves the Agent view, and does not
+create lineage. Browser tool navigation remains an explicit navigate/open choice.

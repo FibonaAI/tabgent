@@ -46,7 +46,7 @@ export const bridge={threadId:null,send(name,args=[]){
  }
 }};
 window.setupTest={emit,requests:[],actions:[],context(value){listeners.get('codex-context')?.(value);},select(value){listeners.get('codex-selection')?.(value);},install(){sessionStorage.installed='true';sessionStorage.helper='true';},externalLogin(){sessionStorage.auth='true';},complete(){authenticated=true;sessionStorage.auth='true';emit('account/login/completed',{success:true,loginId:'test-login'});},fail(){emit('account/login/completed',{success:false,loginId:'test-login'});}};
-export async function openConversationLink(url,active){window.setupTest.actions.push({name:'openConversationLink',url,active})}
+export async function openConversationLink(url,active,newTab){window.setupTest.actions.push({name:'openConversationLink',url,active,newTab})}
 export async function openRelatedThread(threadId){window.setupTest.actions.push({name:'openRelatedThread',threadId})}
 export async function pageHistory(threadId){
  if(threadId){window.setupTest.actions.push({name:'switchHistory',threadId});throw Error('Fixture switch');}
@@ -135,6 +135,27 @@ export function saveScopePreference(){}
           () => document.querySelector('#connection').dataset.state === 'ready',
         );
         assert.equal(await page.locator('#relations').count(), 0);
+        await page.evaluate(() =>
+          setupTest.emit('item/completed', {
+            item: {
+              id: 'link-intents',
+              type: 'agentMessage',
+              text: '[Continue](https://example.test/next "browser:current") [Reference](https://example.test/ref "browser:new") [Plain](https://example.test/plain)',
+            },
+          }),
+        );
+        const currentLink = page.locator('#messages a').filter({ hasText: 'Continue' });
+        await currentLink.click();
+        assert.equal((await page.evaluate(() => setupTest.actions.at(-1))).newTab, false);
+        assert.equal(await currentLink.getAttribute('title'), 'Open in the linked webpage tab');
+        await currentLink.click({ modifiers: ['Meta'] });
+        assert.equal((await page.evaluate(() => setupTest.actions.at(-1))).newTab, true);
+        for (const name of ['Reference', 'Plain']) {
+          await page.locator('#messages a').filter({ hasText: name }).click();
+          assert.equal((await page.evaluate(() => setupTest.actions.at(-1))).newTab, true);
+        }
+        await page.evaluate(() => document.querySelector('#messages').replaceChildren());
+
         async function assertAnchored(menuId, buttonId) {
           const menu = await page.locator(menuId).boundingBox();
           const button = await page.locator(buttonId).boundingBox();
@@ -267,6 +288,23 @@ export function saveScopePreference(){}
         );
         await page.locator('.lineage-details summary').first().click();
         assert(await page.locator('.lineage-details code').first().isVisible());
+        await page.locator('.lineage-details code').first().click();
+        assert(
+          await page.locator('.lineage-details code').first().isVisible(),
+          'Clicks inside keep details open',
+        );
+        await page.locator('#prompt').click();
+        assert(
+          await page.locator('.lineage-details code').first().isHidden(),
+          'Clicks outside dismiss details',
+        );
+        await page.locator('.lineage-details summary').first().click();
+        await page.keyboard.press('Escape');
+        assert(
+          await page.locator('.lineage-details code').first().isHidden(),
+          'Escape dismisses details',
+        );
+
         assert.equal(
           await page.locator('.lineage-details code').first().textContent(),
           'parent-123',
@@ -783,6 +821,14 @@ export function saveScopePreference(){}
           name: 'openConversationLink',
           url: quote.url,
           active: false,
+          newTab: true,
+        });
+        await bubble.locator('blockquote a').click();
+        assert.deepEqual(await page.evaluate(() => setupTest.actions.at(-1)), {
+          name: 'openConversationLink',
+          url: quote.url,
+          active: true,
+          newTab: true,
         });
         assert.equal(await bubble.evaluate((el) => el.firstElementChild.tagName), 'BLOCKQUOTE');
         assert.equal(await bubble.evaluate((el) => el.children[1].textContent), 'Explain this');

@@ -235,7 +235,12 @@ for (const type of ['click', 'auxclick'])
     event.preventDefault();
     openConversationLink(
       anchor.href,
-      !(event.button === 1 || event.metaKey || event.ctrlKey),
+      !(event.button === 1 || event.metaKey || event.ctrlKey) || event.shiftKey,
+      event.button === 1 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        anchor.dataset.browserIntent !== 'current',
     ).catch((error) => showError(error.message));
   });
 // CommonMark/GFM parsing with sanitized DOM; never execute model-supplied HTML.
@@ -243,6 +248,13 @@ function markdown(target, text) {
   const fragment = markdownFragment(text);
   for (const a of fragment.querySelectorAll('a')) {
     if (!/^https?:|^mailto:/.test(a.getAttribute('href') || '')) a.removeAttribute('href');
+    const intent = a.title === 'browser:current' ? 'current' : 'new';
+    a.dataset.browserIntent = intent;
+    const hint = i18n(intent === 'current' ? 'linkOpenCurrent' : 'linkOpenNew');
+    a.title =
+      a.title && !['browser:current', 'browser:new'].includes(a.title)
+        ? `${a.title} · ${hint}`
+        : hint;
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
   }

@@ -759,5 +759,11 @@
   },
   "scopeBrowserExplanation": {
     "message": "Access tabs across all windows in this browser profile."
+  },
+  "linkOpenCurrent": {
+    "message": "Open in the linked webpage tab"
+  },
+  "linkOpenNew": {
+    "message": "Open in a new tab"
   }
 }

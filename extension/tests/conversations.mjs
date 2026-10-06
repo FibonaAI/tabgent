@@ -383,11 +383,34 @@ const clone = await call({
 const cloneView = await attach(childTab.id, clone.tabId);
 await cloneView.send({ type: 'bind', threadId: 'full-agent-thread' });
 const cloneKey = saved.agentViews.find(([tabId]) => tabId === clone.tabId)[1];
+const tabCountBeforeLink = tabs.size;
+const linksBeforeNavigation = linkCalls.length;
+const samePage = await call({
+  type: 'openConversationLink',
+  conversationKey: cloneKey,
+  companionTabId: childTab.id,
+  url: 'https://same-tab.test/',
+  newTab: false,
+});
+assert.equal(samePage.tabId, childTab.id);
+assert.equal(tabs.get(childTab.id).url, 'https://same-tab.test/');
+assert.equal(tabs.size, tabCountBeforeLink);
+assert.equal(
+  linkCalls.length,
+  linksBeforeNavigation,
+  'Same-tab navigation does not create lineage',
+);
+assert.equal(
+  tabs.get(clone.tabId).url,
+  chrome.runtime.getURL('ui/chat.html'),
+  'Keep the full Agent page',
+);
 const linked = await call({
   type: 'openConversationLink',
   conversationKey: cloneKey,
   url: 'https://linked.test/',
   active: false,
+  newTab: true,
 });
 childSession = saved.conversations.find(([key]) => key === linked.tabId)[1];
 assert.equal(

@@ -105,13 +105,14 @@ export async function openRelatedThread(threadId) {
   if (result?.error) throw Error(result.error);
 }
 
-export async function openConversationLink(url, active) {
+export async function openConversationLink(url, active, newTab = true) {
   const result = await chrome.runtime.sendMessage({
     type: 'openConversationLink',
     conversationKey: state.conversationKey,
     companionTabId: state.companionTabId,
     url,
     active,
+    newTab,
   });
   if (result?.error) throw Error(result.error);
   return result;

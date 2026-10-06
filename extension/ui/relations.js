@@ -12,6 +12,19 @@ export function isLineageNote(item) {
 export function createRelations({ rpc, i18n, open, error, ready }) {
   const messages = document.querySelector('#messages');
   let revision = 0;
+  document.addEventListener('click', (event) => {
+    for (const details of messages.querySelectorAll('.lineage-details[open]')) {
+      if (!details.contains(event.target)) details.open = false;
+    }
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    for (const details of messages.querySelectorAll('.lineage-details[open]')) {
+      const hadFocus = details.contains(document.activeElement);
+      details.open = false;
+      if (hadFocus) details.querySelector('summary').focus();
+    }
+  });
   function branchIcon() {
     const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     icon.setAttribute('viewBox', '0 0 24 24');

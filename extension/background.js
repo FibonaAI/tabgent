@@ -685,6 +685,10 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       const url = new URL(msg.url);
       if (!['http:', 'https:'].includes(url.protocol)) throw Error('Invalid link');
       const owner = await chrome.tabs.get(msg.companionTabId ?? source.tabId);
+      if (msg.newTab === false && !owner.url?.startsWith(chrome.runtime.getURL('ui/chat.html'))) {
+        await chrome.tabs.update(owner.id, { url: url.href });
+        return { tabId: owner.id };
+      }
       const tab = await chrome.tabs.create({
         url: url.href,
         windowId: owner.windowId,
