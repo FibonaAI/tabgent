@@ -1,6 +1,5 @@
 <h1>
-  <img src="extension/icons/app-128.png" width="40" height="40" align="absmiddle" alt="Tabgent logo">
-  Tabgent
+  <img src="docs/assets/wordmark.svg" width="196" height="44" alt="Tabgent">
 </h1>
 
 **Your agent in every tab.**
