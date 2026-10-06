@@ -135,6 +135,24 @@ export function saveScopePreference(){}
           () => document.querySelector('#connection').dataset.state === 'ready',
         );
         assert.equal(await page.locator('#relations').count(), 0);
+        assert(
+          await page.locator('#newConversation').isDisabled(),
+          'Empty chat cannot create another empty chat',
+        );
+        await page.evaluate(() =>
+          setupTest.emit('item/completed', {
+            item: {
+              id: 'new-chat-button-fixture',
+              type: 'userMessage',
+              content: [{ type: 'text', text: 'Hello' }],
+            },
+          }),
+        );
+        assert(
+          await page.locator('#newConversation').isEnabled(),
+          'A conversation can start a new chat',
+        );
+
         await page.evaluate(() =>
           setupTest.emit('item/completed', {
             item: {

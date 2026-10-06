@@ -549,6 +549,7 @@ function toolDetails(record, item, completed) {
 }
 function renderItem(item, completed = true, timestamp = Date.now()) {
   if (!item?.id || isLineageNote(item)) return;
+  if (item.type === 'userMessage') $('newConversation').disabled = false;
   let record = items.get(item.id);
   const optimisticIndex =
     item.type === 'userMessage'
@@ -951,6 +952,7 @@ async function send(queue = busy && queueing) {
   if (!queue) node('span', i18n('sendingMessage'), el).className = 'delivery-status';
   if (!queue) optimisticUsers.push(submitted);
   document.body.classList.remove('empty');
+  $('newConversation').disabled = false;
   $('prompt').value = '';
   saveDraft();
   resizePrompt();
@@ -1868,10 +1870,19 @@ document.querySelector('.settings').addEventListener('scroll', () => {
 
 $('openAgent').hidden = bridge.isTab;
 $('openAgent').onclick = () => openAgentTab().catch((e) => showError(e.message));
-$('newConversation').onclick = () =>
-  newConversation({ ...bridge.settings, model: $('model').value, effort: $('effort').value }).catch(
-    (e) => showError(e.message),
-  );
+$('newConversation').onclick = async () => {
+  $('newConversation').disabled = true;
+  try {
+    await newConversation({
+      ...bridge.settings,
+      model: $('model').value,
+      effort: $('effort').value,
+    });
+  } catch (e) {
+    $('newConversation').disabled = false;
+    showError(e.message);
+  }
+};
 addWebUiListener('codex-title', (name) => {
   $('title').value = name;
   document.title = name;

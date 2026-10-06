@@ -11,6 +11,7 @@ const event = () => ({
 const tabs = new Map([[1, { id: 1, windowId: 1, url: 'https://example.test/' }]]);
 let nextTab = 1,
   saved = {},
+  local = {},
   behavior;
 const sent = [];
 const closedPanels = [];
@@ -42,7 +43,10 @@ globalThis.chrome = {
     connectNative: () => native,
   },
   storage: {
-    local: { get: async () => ({}), set: async () => {} },
+    local: {
+      get: async () => structuredClone(local),
+      set: async (v) => Object.assign(local, structuredClone(v)),
+    },
     session: { get: async () => ({}), set: async (v) => Object.assign(saved, v) },
   },
   sidePanel: {
@@ -89,6 +93,21 @@ const call = (m) =>
       resolve,
     ),
   );
+async function newChatAndOpen(message) {
+  const count = tabs.size;
+  const result = await call(message);
+  assert.equal(tabs.size, count, 'New chat does not create a browser tab');
+  const companion =
+    message.companionTabId ??
+    saved.conversations.find(([key]) => key === result.conversationKey)[1].tabId;
+  const view = await attach(companion);
+  assert.equal(view.messages[0].state.conversationKey, result.conversationKey);
+  return call({
+    type: 'openAgent',
+    conversationKey: result.conversationKey,
+    companionTabId: companion,
+  });
+}
 async function attach(tabId, viewId, url = 'chrome-extension://test/ui/chat.html') {
   const messages = [];
   const p = {
@@ -152,7 +171,27 @@ assert.equal(sidebar.messages.at(-1).value.params.delta, 'Hello');
 assert.equal(full.messages.at(-1).value.params.delta, 'Hello');
 await sidebar.send({ type: 'ui', name: 'codexScope', args: ['browser'] });
 const copiedSettings = { model: 'test-model', effort: 'high', mode: 'plan', permissionMode: 'ask' };
-const fresh = await call({
+// New browser tabs inherit preferences; Agent copies retain their source settings.
+const latestSettings = { model: 'latest-model', effort: 'high', permissionMode: 'full' };
+await sidebar.send({ type: 'ui', name: 'codexSettings', args: [latestSettings] });
+const newWebTab = await chrome.tabs.create({ url: 'https://preferences.test/' });
+const newWebChat = await attach(newWebTab.id);
+assert.deepEqual(newWebChat.messages[0].state.settings, latestSettings);
+const copied = await newChatAndOpen({
+  type: 'newConversation',
+  conversationKey: 1,
+  settings: copiedSettings,
+});
+const copiedView = await attach(copied.tabId, copied.tabId);
+assert.deepEqual(copiedView.messages[0].state.settings, copiedSettings);
+assert.deepEqual(
+  local.composerDefaults,
+  latestSettings,
+  'Copying does not replace recent preferences',
+);
+console.log('PASS new tabs inherit recent composer settings; copies preserve source settings');
+
+const fresh = await newChatAndOpen({
   type: 'newConversation',
   conversationKey: 1,
   windowId: 1,
@@ -288,8 +327,8 @@ const freshSession = saved.conversations.find(([key]) => key === freshState.conv
 tabs.delete(fresh.tabId);
 await chrome.tabs.onRemoved.emit(fresh.tabId);
 assert(
-  sent.some((m) => m.op === 'close' && m.session === freshSession.id),
-  'Closing a fresh Agent tab releases its independent session',
+  !sent.some((m) => m.op === 'close' && m.session === freshSession.id),
+  'Closing an Agent mirror preserves the sidebar conversation',
 );
 assert(!sent.some((m) => m.op === 'close' && m.session === session.id));
 await native.onMessage.emit({
@@ -375,7 +414,7 @@ assert(
   !saved.conversations.some(([key]) => key === origin.id),
   'Closed parent released after durable link',
 );
-const clone = await call({
+const clone = await newChatAndOpen({
   type: 'newConversation',
   conversationKey: childTab.id,
   settings: copiedSettings,
@@ -451,18 +490,23 @@ assert.equal(relatedView.messages.at(-1).value.result.parents[0].threadId, 'pare
 chrome.windows = { update: async () => ({}) };
 const relatedOpened = await call({
   type: 'openRelatedThread',
-  conversationKey: childTab.id,
+  conversationKey: relatedView.messages[0].state.conversationKey,
   threadId: 'full-agent-thread',
 });
-assert.equal(relatedOpened.tabId, clone.tabId);
+assert.equal(relatedOpened.tabId, childTab.id);
 assert(
-  (await call({ type: 'openRelatedThread', conversationKey: childTab.id, threadId: 'unrelated' }))
-    .error,
+  (
+    await call({
+      type: 'openRelatedThread',
+      conversationKey: relatedView.messages[0].state.conversationKey,
+      threadId: 'unrelated',
+    })
+  ).error,
 );
 const beforeFocus = tabs.size;
 const pageOpened = await call({
   type: 'openRelatedThread',
-  conversationKey: childTab.id,
+  conversationKey: relatedView.messages[0].state.conversationKey,
   threadId: 'child-thread',
 });
 assert.equal(
@@ -473,7 +517,7 @@ assert.equal(
 assert.equal(tabs.size, beforeFocus, 'Do not create a duplicate tab');
 const restored = await call({
   type: 'openRelatedThread',
-  conversationKey: childTab.id,
+  conversationKey: relatedView.messages[0].state.conversationKey,
   threadId: 'parent-thread',
 });
 assert(!restored.error, restored.error);
@@ -488,7 +532,7 @@ assert.equal(
 );
 const repeated = await call({
   type: 'openRelatedThread',
-  conversationKey: childTab.id,
+  conversationKey: relatedView.messages[0].state.conversationKey,
   threadId: 'parent-thread',
 });
 assert.equal(repeated.tabId, restored.tabId, 'Reuse the restored tab');
@@ -499,7 +543,7 @@ await chrome.webNavigation.onCreatedNavigationTarget.emit({
 });
 assert.equal(
   saved.conversations.find(([key]) => key === noOpener.id)[1].parent.threadId,
-  'child-thread',
+  'full-agent-thread',
 );
 assert(
   (
@@ -528,7 +572,7 @@ chrome.runtime.connect = () => ({
     portListener({ type: 'attached', state: { windowId: 2, conversationKey: 10 } });
   },
 });
-globalThis.location = { href: chrome.runtime.getURL('ui/chat.html') };
+globalThis.location = { href: chrome.runtime.getURL('ui/chat.html'), reload() {} };
 chrome.runtime.sendMessage = async (m) => {
   uiCalls.push(m);
   return {};

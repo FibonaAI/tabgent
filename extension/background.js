@@ -63,7 +63,10 @@ async function getSession(tabId) {
   const key = sidebarViews.get(tabId) ?? (agentViews.has(tabId) ? `sidebar:${tabId}` : tabId);
   let s = sessions.get(key);
   if (!s) {
-    await chrome.tabs.get(tabId);
+    const [, { composerDefaults }] = await Promise.all([
+      chrome.tabs.get(tabId),
+      chrome.storage.local.get('composerDefaults'),
+    ]);
     // Another view may have created this session while Chrome resolved the tab.
     if (sessions.has(key)) return sessions.get(key);
     s = {
@@ -72,6 +75,7 @@ async function getSession(tabId) {
       scope: 'window',
       key,
       draft: '',
+      settings: composerDefaults ? { ...composerDefaults } : undefined,
       ports: new Set(),
     };
     sessions.set(key, s);
@@ -565,6 +569,8 @@ chrome.runtime.onConnect.addListener((port) => {
             ? arg.permissionMode
             : 'ask',
         };
+        const { model, effort, permissionMode } = s.settings;
+        await chrome.storage.local.set({ composerDefaults: { model, effort, permissionMode } });
         await persist();
         for (const p of s.ports) if (p !== port) event(p, 'codex-settings', arg);
       }
@@ -805,7 +811,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
         key: id,
         tabId: msg.companionTabId ?? source.tabId,
         scope: source.scope,
-        viewOnly: true,
+        viewOnly: Boolean(sender.tab && agentViews.has(sender.tab.id)),
         settings: {
           model: String(msg.settings?.model || '').slice(0, 200),
           effort: String(msg.settings?.effort || '').slice(0, 30),
@@ -817,8 +823,15 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
         draft: '',
         ports: new Set(),
       };
+      await recordHistory(source);
       sessions.set(id, session);
-      return openAgentTab(session, msg.windowId);
+      if (sender.tab && agentViews.has(sender.tab.id)) {
+        agentViews.set(sender.tab.id, id);
+      } else {
+        sidebarViews.set(session.tabId, id);
+      }
+      await persist();
+      return { conversationKey: id };
     }
   })().then(reply, (e) => reply({ error: e.message }));
   return true;

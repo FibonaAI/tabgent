@@ -398,7 +398,7 @@
     "message": "Open this conversation in a new tab"
   },
   "newAgentConversation": {
-    "message": "New Agent conversation with the same page and settings"
+    "message": "New chat"
   },
   "pdfOpenNative": {
     "message": "Open in Chrome viewer"

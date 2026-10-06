@@ -127,6 +127,7 @@ export async function newConversation(settings) {
     windowId: state.windowId,
   });
   if (result.error) throw Error(result.error);
+  location.reload();
 }
 
 export async function openAgentTab() {
