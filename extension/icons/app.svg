@@ -1,14 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <defs>
-    <linearGradient id="tile" x1="8" y1="4" x2="56" y2="62" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#8B78F4"/>
-      <stop offset="1" stop-color="#5846C9"/>
-    </linearGradient>
-  </defs>
-  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#tile)"/>
-  <path d="M14 15H27L32 20H50V46C50 48.76 47.76 51 45 51H19C16.24 51 14 48.76 14 46V15Z" stroke="#D9D1FF" stroke-width="2.4" stroke-linejoin="round"/>
-  <g stroke="white" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
-    <path stroke="#AFE5FF" d="M20 28H30M25 28V43"/>
-    <path stroke="#F4CDFF" d="M33 43L38.5 28L44 43M35.2 37H41.8"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none"><defs><linearGradient id="polished" x1="8" y1="4" x2="56" y2="62" gradientUnits="userSpaceOnUse"><stop stop-color="#8070DD"/><stop offset="1" stop-color="#4935A8"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="16" fill="url(#polished)"/><path d="M17 15H26Q27 15 28 16L31 19Q32 20 33.5 20H47Q50 20 50 23V44Q50 51 43 51H21Q14 51 14 44V18Q14 15 17 15Z" stroke="#EEE8FF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 30V32.5M39 30V32.5" stroke="#EEE8FF" stroke-width="2.6" stroke-linecap="round"/><path d="M26 39Q32 44.5 38 39" stroke="#EEE8FF" stroke-width="2.2" stroke-linecap="round"/></svg>
