@@ -1,8 +1,7 @@
-<p align="center">
-  <img src="extension/icons/app-128.png" width="64" alt="Tabgent logo">
-</p>
-
-# Tabgent
+<h1>
+  <img src="extension/icons/app-128.png" width="40" height="40" align="absmiddle" alt="Tabgent logo">
+  Tabgent
+</h1>
 
 **Your agent in every tab.**
 
