@@ -45,6 +45,7 @@ export const bridge={threadId:null,send(name,args=[]){
  }
 }};
 window.setupTest={emit,requests:[],actions:[],context(value){listeners.get('codex-context')?.(value);},select(value){listeners.get('codex-selection')?.(value);},install(){sessionStorage.installed='true';sessionStorage.helper='true';},externalLogin(){sessionStorage.auth='true';},complete(){authenticated=true;sessionStorage.auth='true';emit('account/login/completed',{success:true,loginId:'test-login'});},fail(){emit('account/login/completed',{success:false,loginId:'test-login'});}};
+export async function openConversationLink(url,active){window.setupTest.actions.push({name:'openConversationLink',url,active})}
 export async function newConversation(){}
 export async function openAgentTab(){window.setupTest.actions.push({name:'openAgent'})}
 export async function startBridge(){if(mode==='attach-failure')throw Error('Missing tab');}
@@ -586,6 +587,12 @@ export function saveScopePreference(){}
         assert.equal(await bubble.locator('blockquote > div').textContent(), quote.text);
         assert.equal(await bubble.locator('blockquote b').count(), 0);
         assert.equal(await bubble.locator('blockquote a').getAttribute('href'), quote.url);
+        await bubble.locator('blockquote a').click({ modifiers: ['Meta'] });
+        assert.deepEqual(await page.evaluate(() => setupTest.actions.at(-1)), {
+          name: 'openConversationLink',
+          url: quote.url,
+          active: false,
+        });
         assert.equal(await bubble.evaluate((el) => el.firstElementChild.tagName), 'BLOCKQUOTE');
         assert.equal(await bubble.evaluate((el) => el.children[1].textContent), 'Explain this');
         assert(input.find((x) => x.type === 'text' && x.text.includes(quote.text)));

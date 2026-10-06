@@ -5,6 +5,7 @@ import DOMPurify from '../vendor/dompurify/purify.js';
 import {
   bridge,
   openAgentTab,
+  openConversationLink,
   newConversation,
   startBridge,
   bindThread,
@@ -222,6 +223,18 @@ function node(tag, text, parent) {
   parent?.append(e);
   return e;
 }
+// Preserve conversation ownership even though links intentionally use noopener.
+for (const type of ['click', 'auxclick'])
+  document.addEventListener(type, (event) => {
+    if (event.button > 1 || event.defaultPrevented) return;
+    const anchor = event.target.closest?.('a[href]');
+    if (!anchor?.closest('#messages') || !/^https?:/.test(anchor.href)) return;
+    event.preventDefault();
+    openConversationLink(
+      anchor.href,
+      !(event.button === 1 || event.metaKey || event.ctrlKey),
+    ).catch((error) => showError(error.message));
+  });
 // CommonMark/GFM parsing with sanitized DOM; never execute model-supplied HTML.
 function markdown(target, text) {
   const fragment = DOMPurify.sanitize(marked.parse(text, { gfm: true }), {

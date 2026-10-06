@@ -95,6 +95,17 @@ export function saveScopePreference(scope) {
   state.scope = scope;
 }
 
+export async function openConversationLink(url, active) {
+  const result = await chrome.runtime.sendMessage({
+    type: 'openConversationLink',
+    conversationKey: state.conversationKey,
+    url,
+    active,
+  });
+  if (result?.error) throw Error(result.error);
+  return result;
+}
+
 export async function newConversation(settings) {
   const result = await chrome.runtime.sendMessage({
     type: 'newConversation',

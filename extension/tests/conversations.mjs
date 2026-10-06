@@ -48,11 +48,12 @@ globalThis.chrome = {
       return t;
     },
     update: async (id, v) => Object.assign(tabs.get(id), v),
+    onCreated: event(),
     onActivated: event(),
     onRemoved: event(),
   },
   scripting: { executeScript: async () => [] },
-  webNavigation: { onCommitted: event() },
+  webNavigation: { onCommitted: event(), onCreatedNavigationTarget: event() },
   contextMenus: { onClicked: event() },
 };
 await import('../background.js');
@@ -197,6 +198,97 @@ assert.equal(panelOptions.length, 0);
 assert.equal(closedPanels.length, 0);
 console.log(
   'PASS shared Agent tab / original page context / independent sidebar / draft sync / close lifecycle',
+);
+
+// Browser links and explicit conversation links retain their actual parent.
+const linkCalls = [];
+native.postMessage = (message) => {
+  sent.push(message);
+  if (message.message?.method === 'bridge/thread/link') {
+    linkCalls.push(message.message.params);
+    queueMicrotask(() =>
+      native.onMessage.emit({
+        session: message.session,
+        message: { id: message.message.id, result: {} },
+      }),
+    );
+  }
+};
+const origin = await chrome.tabs.create({ url: 'https://parent.test/' });
+const originView = await attach(origin.id);
+await originView.send({ type: 'bind', threadId: 'parent-thread' });
+const childTab = await chrome.tabs.create({ url: 'https://child.test/', openerTabId: origin.id });
+await chrome.tabs.onCreated.emit(childTab);
+await chrome.webNavigation.onCreatedNavigationTarget.emit({
+  sourceTabId: origin.id,
+  tabId: childTab.id,
+});
+let childSession = saved.conversations.find(([key]) => key === childTab.id)[1];
+assert.equal(childSession.parent.threadId, 'parent-thread');
+await chrome.tabs.onRemoved.emit(origin.id);
+assert(
+  saved.conversations.some(([key]) => key === origin.id),
+  'Keep pending parent until link is durable',
+);
+await native.onMessage.emit({
+  session: childSession.id,
+  message: { method: 'bridge/ready', params: { threadId: 'child-thread' } },
+});
+await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(linkCalls.length, 1, 'Duplicate Chrome creation events do not duplicate notes');
+assert.equal(linkCalls[0].parentThreadId, 'parent-thread');
+assert.equal(linkCalls[0].childThreadId, 'child-thread');
+assert(
+  !saved.conversations.some(([key]) => key === origin.id),
+  'Closed parent released after durable link',
+);
+const clone = await call({
+  type: 'newConversation',
+  conversationKey: childTab.id,
+  settings: copiedSettings,
+});
+const cloneView = await attach(childTab.id, clone.tabId);
+await cloneView.send({ type: 'bind', threadId: 'full-agent-thread' });
+const cloneKey = saved.agentViews.find(([tabId]) => tabId === clone.tabId)[1];
+const linked = await call({
+  type: 'openConversationLink',
+  conversationKey: cloneKey,
+  url: 'https://linked.test/',
+  active: false,
+});
+childSession = saved.conversations.find(([key]) => key === linked.tabId)[1];
+assert.equal(
+  childSession.parent.threadId,
+  'full-agent-thread',
+  'Use conversation owner, not companion tab thread',
+);
+assert.equal(tabs.get(linked.tabId).active, false, 'Modified clicks preserve background opening');
+await native.onMessage.emit({
+  session: childSession.id,
+  message: { method: 'bridge/ready', params: { threadId: 'linked-thread' } },
+});
+await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(linkCalls[1].parentThreadId, 'full-agent-thread');
+const noOpener = await chrome.tabs.create({ url: 'https://noopener.test/' });
+await chrome.webNavigation.onCreatedNavigationTarget.emit({
+  sourceTabId: childTab.id,
+  tabId: noOpener.id,
+});
+assert.equal(
+  saved.conversations.find(([key]) => key === noOpener.id)[1].parent.threadId,
+  'child-thread',
+);
+assert(
+  (
+    await call({
+      type: 'openConversationLink',
+      conversationKey: cloneKey,
+      url: 'javascript:alert(1)',
+    })
+  ).error,
+);
+console.log(
+  'PASS reciprocal lineage routing / duplicate events / closed parent / full Agent source / noopener / URL validation',
 );
 
 const { startBridge, newConversation } = await import('../bridge.js');

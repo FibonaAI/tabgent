@@ -26,6 +26,7 @@ os.chmod(home, 0o700)
 host = home / "host.py"
 shutil.copy2(root / "native/host.py", host)
 shutil.copy2(root / "native/attachments.py", home / "attachments.py")
+shutil.copy2(root / "native/lineage.py", home / "lineage.py")
 launcher = home / "connector"
 launcher.write_text(
     "#!/bin/sh\nexport CODEX_HOME="

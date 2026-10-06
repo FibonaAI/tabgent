@@ -12,6 +12,7 @@ import threading
 import time
 import uuid
 import attachments
+import lineage
 
 HOME = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
 LOCK = threading.Lock()
@@ -76,8 +77,9 @@ def auth_stamp():
 
 
 class Session:
-    def __init__(self, ident, config):
+    def __init__(self, ident, config, thread_id=None):
         self.id = ident
+        self.resume_thread_id = thread_id
         self.config = config
         self.process = None
         self.initialized = None
@@ -85,6 +87,7 @@ class Session:
         self.pending = {}
         self.sequence = -1
         self.write_lock = threading.Lock()
+        self.lineage_lock = threading.RLock()
         self.closed = False
         self.thread_response = None
         self.populated = False
@@ -96,6 +99,12 @@ class Session:
     def emit(self, message):
         if not self.closed:
             send({"op": "event", "session": self.id, "message": message})
+
+    def emit_ready(self):
+        self.emit({
+            "method": "bridge/ready",
+            "params": {"threadId": self.thread["id"] if self.thread else None},
+        })
 
     def write(self, message):
         if self.closed or not self.process:
@@ -259,11 +268,17 @@ class Session:
             account = self.rpc("account/read")
             if account.get("account") or account.get("requiresOpenaiAuth") is False:
                 self.thread_response = self.rpc(
-                    "thread/start", self.thread_params(self.config)
+                    "thread/resume" if self.resume_thread_id else "thread/start",
+                    self.thread_params({
+                        **self.config,
+                        **({"threadId": self.resume_thread_id, "excludeTurns": False}
+                           if self.resume_thread_id else {}),
+                    }),
                 )
                 self.thread = self.thread_response["thread"]
             self.ready = True
-            self.emit({"method": "bridge/ready"})
+            lineage.flush(self, HOME)
+            self.emit_ready()
         except Exception:
             self.starting = False
             if self.process and self.process.poll() is None:
@@ -288,8 +303,48 @@ class Session:
             "ephemeral": False,
         }
 
-    def request(self, message):
+    def request(self, message, lineage_flushed=False):
         method = message.get("method")
+        if method == "bridge/thread/link":
+            def link_threads():
+                try:
+                    params = message["params"]
+                    lineage.record(
+                        HOME, params["parentThreadId"], params["childThreadId"],
+                        params.get("source", {}),
+                    )
+                    # Acknowledge durable storage first: a busy parent must not block
+                    # a browser tool result or the child's first message.
+                    self.emit({"id": message["id"], "result": {}})
+                    for session in list(SESSIONS.values()):
+                        try:
+                            lineage.flush(session, HOME)
+                        except Exception:
+                            pass  # Durable notes retry before the next user turn.
+                    active_ids = {s.thread["id"] for s in SESSIONS.values() if s.thread}
+                    for thread_id in (params["parentThreadId"], params["childThreadId"]):
+                        if thread_id in active_ids:
+                            continue
+                        temporary = Session("lineage", CONFIG or {}, thread_id)
+                        try:
+                            temporary.start()
+                        finally:
+                            temporary.close()
+                except Exception as error:
+                    self.emit({"id": message["id"], "error": {"code": -32000, "message": str(error)}})
+            POOL.submit(link_threads)
+            return
+        if method in ("turn/start", "thread/queue/start", "turn/steer"):
+            # Flush relationship notes before admitting input, without generating a turn.
+            def with_lineage():
+                try:
+                    lineage.flush(self, HOME)
+                    self.request(message, lineage_flushed=True)
+                except Exception as error:
+                    self.emit({"id": message["id"], "error": {"code": -32000, "message": str(error)}})
+            if not lineage_flushed:
+                POOL.submit(with_lineage)
+                return
         if method == "bridge/pdf/read":
             try:
                 params = message["params"]
@@ -425,20 +480,20 @@ def handle(message):
         if ident in SESSIONS:
             session = SESSIONS[ident]
             if session.ready:
-                session.emit({"method": "bridge/ready"})
+                session.emit_ready()
             elif session.process is None:
                 POOL.submit(session.start)
         else:
-            session = SESSIONS.pop("spare", None)
+            session = SESSIONS.pop("spare", None) if not message.get("threadId") else None
             if session is None:
-                session = Session(ident, CONFIG or {})
+                session = Session(ident, CONFIG or {}, message.get("threadId"))
                 SESSIONS[ident] = session
                 POOL.submit(session.start)
             else:
                 session.id = ident
                 SESSIONS[ident] = session
                 if session.ready:
-                    session.emit({"method": "bridge/ready"})
+                    session.emit_ready()
                 elif session.process is None:
                     POOL.submit(session.start)
             warm()
@@ -454,7 +509,7 @@ def handle(message):
         if session:
             POOL.submit(session.close)
         if op == "restart":
-            session = Session(ident, CONFIG or {})
+            session = Session(ident, CONFIG or {}, message.get("threadId"))
             SESSIONS[ident] = session
             POOL.submit(session.start)
 

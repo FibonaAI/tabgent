@@ -91,3 +91,19 @@ companion page and scoped Chrome interaction. Command and file tools retain
 the connector's read-only sandbox and `untrusted` approval policy. Tool
 availability also depends on the installed Codex version and selected model.
 See the [Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference).
+
+## Linked conversations
+
+New tabs opened from webpage links, Agent conversation links, or the browser tool
+retain their source conversation. When both threads are available, the connector
+records reciprocal parent/child notes with thread IDs and source page metadata.
+The notes are appended with `thread/inject_items`, without copying history or
+starting a model turn. Opening another view of the same Agent is not a branch.
+
+Relationships are journaled under
+`$CODEX_HOME/projects/browser-agent-connector/lineage/`. The native host checks
+rollout markers to deduplicate retries, and flushes pending notes on resume and
+before new input. Closed parents can be resumed briefly to record their note;
+locked/unavailable threads retain pending notes until the connector can access them.
+Agents can use the IDs to look up local Codex session history. Page titles and URLs
+in the notes are explicitly untrusted data.

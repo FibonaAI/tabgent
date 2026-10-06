@@ -59,6 +59,102 @@ async function getSession(tabId) {
   }
   return s;
 }
+// Chrome's opener metadata covers ordinary links; Agent links use an explicit source.
+async function trackChild(tabId, parent) {
+  if (!parent || tabId === parent.tabId || agentViews.has(tabId)) return;
+  const child = await getSession(tabId);
+  if (child.parent) return;
+  const source = await chrome.tabs.get(parent.tabId).catch(() => ({}));
+  child.parent = {
+    key: parent.key,
+    threadId: parent.threadId,
+    source: {
+      tabId: parent.tabId,
+      url: source.url || '',
+      title: source.title || '',
+    },
+  };
+  await persist();
+  connect().postMessage({ op: 'claim', session: parent.id, threadId: parent.threadId });
+  connect().postMessage({ op: 'claim', session: child.id, threadId: child.threadId });
+  void linkChildren().catch(console.warn);
+}
+let linking;
+async function linkChildren() {
+  if (linking) return linking;
+  linking = (async () => {
+    for (const child of sessions.values()) {
+      const parent = child.parent;
+      if (!parent || child.linkRecorded || !child.threadId) continue;
+      parent.threadId ||= sessions.get(parent.key)?.threadId;
+      if (!parent.threadId || parent.threadId === child.threadId) continue;
+      await new Promise((resolve, reject) => {
+        const id = ++sequence;
+        const timer = setTimeout(() => {
+          requests.delete(id);
+          reject(Error('Conversation lineage could not be recorded; retry the message'));
+        }, 30000);
+        requests.set(id, {
+          resolve: (value) => {
+            clearTimeout(timer);
+            resolve(value);
+          },
+          reject: (error) => {
+            clearTimeout(timer);
+            reject(error);
+          },
+        });
+        connect().postMessage({
+          op: 'rpc',
+          session: child.id,
+          message: {
+            id,
+            method: 'bridge/thread/link',
+            params: {
+              parentThreadId: parent.threadId,
+              childThreadId: child.threadId,
+              source: parent.source,
+            },
+          },
+        });
+      });
+      child.linkRecorded = true;
+      for (const [key, session] of sessions) {
+        if (
+          session.closedTab &&
+          (!session.parent || session.linkRecorded) &&
+          ![...sessions.values()].some((value) => value.parent?.key === key && !value.linkRecorded)
+        ) {
+          native?.postMessage({ op: 'close', session: session.id });
+          sessions.delete(key);
+        }
+      }
+      await persist();
+    }
+  })();
+  try {
+    await linking;
+  } finally {
+    linking = null;
+  }
+}
+chrome.tabs.onCreated?.addListener(async (tab) => {
+  if (tab.incognito || !Number.isInteger(tab.openerTabId)) return;
+  await loaded;
+  const parent = agentViews.has(tab.openerTabId)
+    ? sessions.get(agentViews.get(tab.openerTabId))
+    : await getSession(tab.openerTabId);
+  await trackChild(tab.id, parent).catch(console.warn);
+});
+chrome.webNavigation.onCreatedNavigationTarget?.addListener(async ({ sourceTabId, tabId }) => {
+  await loaded;
+  const tab = await chrome.tabs.get(tabId).catch(() => null);
+  if (!tab || tab.incognito) return;
+  const parent = agentViews.has(sourceTabId)
+    ? sessions.get(agentViews.get(sourceTabId))
+    : await getSession(sourceTabId);
+  await trackChild(tabId, parent).catch(console.warn);
+});
 function connect() {
   if (native) return native;
   native = chrome.runtime.connectNative('com.browser_agent_connector.codex');
@@ -102,6 +198,11 @@ async function receive(message) {
   const s = [...sessions.values()].find((s) => s.id === message.session);
   if (!s) return;
   const m = message.message;
+  if (m.method === 'bridge/ready' && m.params?.threadId) {
+    s.threadId = m.params.threadId;
+    await persist();
+    void linkChildren().catch(console.warn);
+  }
   if (m.method === 'bridge/authChanged') s.restart = true;
   if (m.method === 'item/tool/call') {
     let result;
@@ -138,6 +239,7 @@ async function receive(message) {
             });
           }),
       );
+      if (args.action === 'open' && value?.id) await trackChild(value.id, s);
       result = {
         success: true,
         contentItems: value?.data
@@ -264,16 +366,23 @@ chrome.runtime.onConnect.addListener((port) => {
         s.threadId = msg.threadId;
         for (const p of s.ports) if (p !== port) event(p, 'codex-thread', s.threadId);
         await persist();
+        void linkChildren().catch(console.warn);
         return;
       }
       if (msg.type !== 'ui') return;
       const [arg] = msg.args || [];
       if (msg.name === 'codexConnect') {
-        connect().postMessage({ op: s.restart ? 'restart' : 'claim', session: s.id });
+        connect().postMessage({
+          op: s.restart ? 'restart' : 'claim',
+          session: s.id,
+          threadId: s.threadId,
+        });
         s.restart = false;
       }
       if (msg.name === 'codexRpc') {
         const m = { ...arg };
+        if (['turn/start', 'thread/queue/start', 'turn/steer'].includes(m.method))
+          await linkChildren();
         if (m.id !== undefined && !m.method) {
           if (!s.pendingQuestions?.includes(m.id)) return;
           s.pendingQuestions = s.pendingQuestions.filter((id) => id !== m.id);
@@ -419,6 +528,21 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       return {};
     }
     if (!sender.url?.startsWith(chrome.runtime.getURL(''))) throw Error('Invalid sender');
+    if (msg.type === 'openConversationLink') {
+      await loaded;
+      const source = sessions.get(msg.conversationKey);
+      if (!source) throw Error('Conversation not found');
+      const url = new URL(msg.url);
+      if (!['http:', 'https:'].includes(url.protocol)) throw Error('Invalid link');
+      const owner = await chrome.tabs.get(source.tabId);
+      const tab = await chrome.tabs.create({
+        url: url.href,
+        windowId: owner.windowId,
+        active: msg.active !== false,
+      });
+      await trackChild(tab.id, source);
+      return { tabId: tab.id };
+    }
     if (msg.type === 'openAgent') {
       await loaded;
       const s = sessions.get(msg.conversationKey);
@@ -458,8 +582,17 @@ chrome.tabs.onRemoved.addListener(async (id) => {
     if (s.tabId !== id && !(s.viewOnly && !remaining)) continue;
     if (remaining) s.tabId = remaining[0];
     else {
-      native?.postMessage({ op: 'close', session: s.id });
-      sessions.delete(key);
+      for (const child of sessions.values())
+        if (child.parent?.key === key) child.parent.threadId ||= s.threadId;
+      if (
+        (s.parent && !s.linkRecorded) ||
+        [...sessions.values()].some((child) => child.parent?.key === key && !child.linkRecorded)
+      ) {
+        s.closedTab = true;
+      } else {
+        native?.postMessage({ op: 'close', session: s.id });
+        sessions.delete(key);
+      }
     }
   }
   await persist();
@@ -475,7 +608,18 @@ chrome.webNavigation.onCommitted.addListener(async (detail) => {
     }
   }
 });
-loaded.then(connect);
+loaded.then(() => {
+  connect();
+  for (const session of sessions.values()) {
+    if (
+      (session.parent && !session.linkRecorded) ||
+      [...sessions.values()].some(
+        (child) => child.parent?.key === session.key && !child.linkRecorded,
+      )
+    )
+      connect().postMessage({ op: 'claim', session: session.id, threadId: session.threadId });
+  }
+});
 
 // Native PDF selections are exposed by Chrome's selection context menu.
 chrome.runtime.onInstalled.addListener(() => {
