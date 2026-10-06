@@ -66,7 +66,7 @@ Copy this into your Codex chat:
 
 ```text
 Install Tabgent for me from:
-https://github.com/FibonaAI/Tabgent
+https://github.com/FibonaAI/tabgent
 
 Check that this Mac has Python 3.9+, Chrome 142+, and a compatible Codex
 installation. Clone the repository into an unused local folder using my
