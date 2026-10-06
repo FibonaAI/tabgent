@@ -1,7 +1,6 @@
 import { createFollowups, selectionContextPrefix } from './followups.js';
 import { createCommands } from './commands.js';
-import { marked } from '../vendor/marked/marked.js';
-import DOMPurify from '../vendor/dompurify/purify.js';
+import { markdownFragment } from './markdown.js';
 import {
   bridge,
   openAgentTab,
@@ -237,11 +236,7 @@ for (const type of ['click', 'auxclick'])
   });
 // CommonMark/GFM parsing with sanitized DOM; never execute model-supplied HTML.
 function markdown(target, text) {
-  const fragment = DOMPurify.sanitize(marked.parse(text, { gfm: true }), {
-    RETURN_DOM_FRAGMENT: true,
-    FORBID_TAGS: ['img', 'style', 'input', 'button', 'form', 'iframe', 'svg', 'video', 'audio'],
-    FORBID_ATTR: ['style', 'id', 'name'],
-  });
+  const fragment = markdownFragment(text);
   for (const a of fragment.querySelectorAll('a')) {
     if (!/^https?:|^mailto:/.test(a.getAttribute('href') || '')) a.removeAttribute('href');
     a.target = '_blank';

@@ -16,3 +16,6 @@ Marked 18.0.14 is bundled in `extension/vendor/marked/` under the MIT license.
 DOMPurify 3.4.16 is bundled in `extension/vendor/dompurify/` under its Apache-2.0
 or MPL-2.0 dual license. Their original license files accompany the sources.
 They render and sanitize conversation Markdown locally; no CDN is used.
+
+KaTeX 0.19.0 is bundled in `extension/vendor/katex/` under the MIT license.
+Its fonts and stylesheet are included for offline mathematical typesetting.

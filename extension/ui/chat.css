@@ -1363,3 +1363,13 @@ select option {
   color: var(--bg);
   font-size: 12px;
 }
+
+.message .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.3em 0;
+  margin: 0.8em 0;
+}
+.message .katex {
+  font-size: 1.1em;
+}

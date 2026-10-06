@@ -72,7 +72,7 @@ export function saveScopePreference(){}
       try {
         res.setHeader(
           'Content-Type',
-          file.endsWith('.js')
+          /\.m?js$/.test(file)
             ? 'text/javascript'
             : file.endsWith('.css')
               ? 'text/css'

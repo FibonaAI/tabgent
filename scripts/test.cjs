@@ -9,6 +9,7 @@ for (const file of [
   'selection.cjs',
   'pdf.cjs',
   'setup-ui.cjs',
+  'math.cjs',
 ]) {
   const python = file.endsWith('.py');
   const result = spawnSync(
