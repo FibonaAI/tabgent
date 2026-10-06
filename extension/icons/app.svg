@@ -1,12 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
   <defs>
-    <linearGradient id="tile" x1="5" y1="2" x2="27" y2="32" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#8674EF"/>
+    <linearGradient id="tile" x1="8" y1="4" x2="56" y2="62" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B78F4"/>
       <stop offset="1" stop-color="#5846C9"/>
     </linearGradient>
   </defs>
-  <rect x="1" y="1" width="30" height="30" rx="8" fill="url(#tile)"/>
-  <rect x="6" y="6" width="20" height="21" rx="4" stroke="#D5CCFF" stroke-width="1.2"/>
-  <path d="M12 5.5H20" stroke="#D5CCFF" stroke-width="2.4" stroke-linecap="round"/>
-  <path d="M11 12H21M16 12V22" stroke="#F3FAFC" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#tile)"/>
+  <path d="M14 15H27L32 20H50V46C50 48.76 47.76 51 45 51H19C16.24 51 14 48.76 14 46V15Z" stroke="#D9D1FF" stroke-width="2.4" stroke-linejoin="round"/>
+  <g stroke="white" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke="#AFE5FF" d="M20 28H30M25 28V43"/>
+    <path stroke="#F4CDFF" d="M33 43L38.5 28L44 43M35.2 37H41.8"/>
+  </g>
 </svg>
