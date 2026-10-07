@@ -2,7 +2,7 @@
   <img src="docs/assets/wordmark.svg" width="196" height="44" alt="Tabgent">
 </h1>
 
-**在浏览器里，与你并肩工作的智能助手。**
+**每个标签页，都有你的智能助手。**
 
 Tabgent 是一款 Chrome 扩展，将 **Codex 带到浏览器侧边栏**。你可以围绕正在阅读的网页提问、比较多个标签页、讨论 PDF，也可以让智能助手浏览和操作网站——这些都能在同一个会话中完成。
 

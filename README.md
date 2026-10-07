@@ -2,7 +2,7 @@
   <img src="docs/assets/wordmark.svg" width="196" height="44" alt="Tabgent">
 </h1>
 
-**A browser agent that works beside you.**
+**Your agent in every tab.**
 
 Tabgent is a Chrome extension that brings **Codex into your browser sidebar**. Ask questions about the page you’re reading, compare open tabs, discuss PDFs, and let the agent navigate and interact with websites—all in the same conversation.
 
