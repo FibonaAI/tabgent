@@ -1,0 +1,14 @@
+{
+  "capturedAt": "2026-10-07T10:22:08.513Z",
+  "model": "gpt-6-astra",
+  "sources": [
+    "https://www.zotero.org/support/sync"
+  ],
+  "resultUrl": "https://www.zotero.org/support/sync",
+  "prompt": "我在两台电脑上用 Zotero，但第二台电脑没有 PDF。请阅读这份官方文档：数据同步与文件同步有什么区别，300 MB 限额会限制我的文献条目吗？用中文简洁解释，给我三个排查步骤。",
+  "answers": [
+    "我先阅读这份官方文档，确认同步方式和容量限制。\nCopy",
+    "300 MB 不会限制你的文献条目。根据官方文档：\n\n数据同步：同步文献条目、笔记、链接、标签等，不包含 PDF 等附件文件；免费且不限容量。\n文件同步：同步 PDF、图片等附件，使用 Zotero Storage 或 WebDAV。300 MB 是 Zotero Storage 的免费附件空间。\n\n第二台电脑有条目却没有 PDF，可能是数据同步成功，但文件未同步。建议按这三步排查：\n\n核对账号并同步：两台电脑在“设置 → 同步”中登录同一个 Zotero 账号；先在第一台手动同步，完成后再同步第二台。\n检查文件同步设置：确认两台都启用了附件同步，并使用相同的存储服务。若用 WebDAV，核对配置并点击“验证服务器”；WebDAV 仅支持个人文献库。\n检查容量与报错：查看第一台是否提示附件空间不足或上传失败。若 Zotero Storage 的 300 MB 已满，可升级空间或将个人库附件改用 WebDAV，再依次同步两台电脑。条目仍可正常同步。\n\n"
+  ],
+  "transcript": "Syncing | Zotero Documentation\nWhile Zotero stores all data locally on your computer by default, Zotero’s sync functionality allows you to access your Zotero library on any computer with internet access. Zotero syncing has two parts: data syncing and file syncing.\n我在两台电脑上用 Zotero，但第二台电脑没有 PDF。请阅读这份官方文档：数据同步与文件同步有什么区别，300 MB 限额会限制我的文献条目吗？用中文简洁解释，给我三个排查步骤。\nWorked for 12s\n\n300 MB 不会限制你的文献条目。根据官方文档：\n\n数据同步：同步文献条目、笔记、链接、标签等，不包含 PDF 等附件文件；免费且不限容量。\n文件同步：同步 PDF、图片等附件，使用 Zotero Storage 或 WebDAV。300 MB 是 Zotero Storage 的免费附件空间。\n\n第二台电脑有条目却没有 PDF，可能是数据同步成功，但文件未同步。建议按这三步排查：\n\n核对账号并同步：两台电脑在“设置 → 同步”中登录同一个 Zotero 账号；先在第一台手动同步，完成后再同步第二台。\n检查文件同步设置：确认两台都启用了附件同步，并使用相同的存储服务。若用 WebDAV，核对配置并点击“验证服务器”；WebDAV 仅支持个人文献库。\n检查容量与报错：查看第一台是否提示附件空间不足或上传失败。若 Zotero Storage 的 300 MB 已满，可升级空间或将个人库附件改用 WebDAV，再依次同步两台电脑。条目仍可正常同步。\nCopy"
+}

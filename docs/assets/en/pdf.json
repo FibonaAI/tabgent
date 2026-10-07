@@ -1,0 +1,14 @@
+{
+  "capturedAt": "2026-10-07T10:22:00.805Z",
+  "model": "gpt-6-astra",
+  "sources": [
+    "https://arxiv.org/pdf/1706.03762v7"
+  ],
+  "resultUrl": "chrome-extension://lfbgkeagkfmndclpgmipadggnkoimkee/pdf/viewer.html?url=https://arxiv.org/pdf/1706.03762v7",
+  "prompt": "Read page 3 of this paper, including Figure 1. Explain the encoder and decoder in plain English, and why the decoder has masked attention. Highlight the selected passage on page 3. Keep the explanation under 130 words.",
+  "answers": [
+    "I’ll read page 3 and Figure 1, then highlight the passage and explain the architecture briefly.\nCopy",
+    "Highlighted the selected passage on page 3.\nIn Figure 1, the encoder (left) reads the input through six layers. Self-attention lets each word gather context from other input words. A small neural network then processes each position separately, building a richer representation.\nThe decoder (right) generates output one word at a time through six layers. It attends to earlier output words and the encoder’s representations, then predicts the next word. Positional encodings tell both sides about word order.\nMasked attention blocks access to future output words. During training, the full correct answer is available; without masking, the decoder could peek ahead. Masking makes training match generation, when only previously generated words are known.\n"
+  ],
+  "transcript": "1706.03762v7\nusing stacked self-attention and point-wise, fully\nconnected layers for both the encoder and decoder\nRead page 3 of this paper, including Figure 1. Explain the encoder and decoder in plain English, and why the decoder has masked attention. Highlight the selected passage on page 3. Keep the explanation under 130 words.\nWorked for 18s\n\nHighlighted the selected passage on page 3.\n\nIn Figure 1, the encoder (left) reads the input through six layers. Self-attention lets each word gather context from other input words. A small neural network then processes each position separately, building a richer representation.\n\nThe decoder (right) generates output one word at a time through six layers. It attends to earlier output words and the encoder’s representations, then predicts the next word. Positional encodings tell both sides about word order.\n\nMasked attention blocks access to future output words. During training, the full correct answer is available; without masking, the decoder could peek ahead. Masking makes training match generation, when only previously generated words are known.\n\nCopy"
+}

@@ -1,0 +1,14 @@
+{
+  "capturedAt": "2026-10-07T10:17:41.237Z",
+  "model": "gpt-6-astra",
+  "sources": [
+    "https://arxiv.org/search/advanced"
+  ],
+  "resultUrl": "https://arxiv.org/search/advanced?advanced=1&terms-0-operator=AND&terms-0-term=%22Retrieval-Augmented+Generation%22&terms-0-field=title&classification-physics_archives=all&classification-include_cross_list=include&date-filter_by=specific_year&date-year=2020&date-from_date=&date-to_date=&date-date_type=submitted_date_first&abstracts=show&size=50&order=-announced_date_first",
+  "prompt": "Use this arXiv search form to find the original 2020 paper whose title contains Retrieval-Augmented Generation. Set the title field and the year, then run the search. Report the matching title and link in English. Do not use another search service.",
+  "answers": [
+    "I’ll set the title and year in the arXiv form, then run the search.\nCopy",
+    "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks — Patrick Lewis et al., originally submitted May 22, 2020.\nFound using arXiv’s Title field and the year 2020.\n"
+  ],
+  "transcript": "Advanced Search | arXiv e-print repository\nAdvanced Search\nUse this arXiv search form to find the original 2020 paper whose title contains Retrieval-Augmented Generation. Set the title field and the year, then run the search. Report the matching title and link in English. Do not use another search service.\nWorked for 15s\n\nRetrieval-Augmented Generation for Knowledge-Intensive NLP Tasks — Patrick Lewis et al., originally submitted May 22, 2020.\n\nFound using arXiv’s Title field and the year 2020.\n\nCopy"
+}

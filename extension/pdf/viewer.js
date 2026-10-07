@@ -4,6 +4,14 @@ import { pdfSource } from '../pdf-routing.js';
 const frame = document.querySelector('#viewer');
 const status = document.querySelector('#status');
 const source = pdfSource(location.href);
+if (source) {
+  const icon = new Image();
+  icon.referrerPolicy = 'no-referrer';
+  icon.onload = () => {
+    document.querySelector('#favicon').href = icon.src;
+  };
+  icon.src = new URL('/favicon.ico', source).href;
+}
 const native = document.querySelector('#native');
 native.textContent = t('pdfOpenNative');
 status.textContent = t('pdfLoading');

@@ -48,6 +48,13 @@ chrome.runtime.onMessage.addListener((m,s,reply)=>{
   const pdf = fs.readFileSync(__dirname + '/fixtures/text.pdf');
   const server = http
     .createServer((req, res) => {
+      if (req.url === '/favicon.ico') {
+        res.setHeader('Content-Type', 'image/svg+xml');
+        res.end(
+          '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="blue"/></svg>',
+        );
+        return;
+      }
       if (req.url === '/html') {
         res.end('<title>HTML fixture</title>Ordinary page');
         return;
@@ -72,10 +79,33 @@ chrome.runtime.onMessage.addListener((m,s,reply)=>{
       if ((await ctl.evaluate(() => chrome.declarativeNetRequest.getDynamicRules())).length) break;
       await new Promise((r) => setTimeout(r, 50));
     }
+    // A normal PDF link preserves phrase highlighting through the extension redirect.
+    const linkedPdf = await browser.newPage();
+    await linkedPdf.goto(base + '/html');
+    await linkedPdf.setContent('<a id="citation">Read the original passage</a>');
+    await linkedPdf
+      .locator('#citation')
+      .evaluate(
+        (a, href) => (a.href = href),
+        base +
+          '/paper?download=no&token=fixture#page=1&search=' +
+          encodeURIComponent('Read directly from PDF.') +
+          '&phrase=true',
+      );
+    await linkedPdf.locator('#citation').click();
+    await linkedPdf.waitForURL('**/pdf/viewer.html?**');
+    const match = linkedPdf.frameLocator('#viewer').locator('.textLayer .highlight.selected');
+    await match.first().waitFor({ timeout: 20000 });
+    assert((await match.allTextContents()).join('').includes('Read directly from PDF.'));
+    await linkedPdf.close();
     const page = await browser.newPage();
     page.on('pageerror', (e) => console.error('VIEWER', e.message));
     await page.goto(base + '/paper?download=no&token=fixture');
     await page.waitForURL('**/pdf/viewer.html?**');
+    await page.waitForFunction(
+      (url) => document.querySelector('#favicon').href === url,
+      base + '/favicon.ico',
+    );
     const viewer = page.frameLocator('#viewer');
     await viewer.locator('.textLayer span').first().waitFor({ timeout: 20000 });
     const id = await ctl.evaluate(

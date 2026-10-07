@@ -4,74 +4,85 @@
 
 **每个标签页，都有你的智能助手。**
 
-Tabgent 是一款 Chrome 扩展，将 **Codex 带到浏览器侧边栏**。你可以围绕正在阅读的网页提问、比较多个标签页、讨论 PDF，也可以让智能助手浏览和操作网站——这些都能在同一个会话中完成。
+Tabgent 是一个 Chrome 扩展，让你在浏览器侧边栏使用 Codex。它能阅读当前网页、比较多个标签页、解释和标注 PDF，也能按你的要求点击、填表和搜索。
 
-**macOS · Chrome 142+ · 使用现有 Codex 登录 · MIT 许可 · 早期预览版**
+[**开始使用 →**](#开始使用) · [功能演示](#功能演示) · [使用场景](docs/use-cases.zh-CN.md)
 
 [English](README.md) · **简体中文**
 
-[开始使用](#开始使用) · [你可以做什么](#你可以做什么) · [隐私与控制](#隐私与控制) · [参与贡献](#参与贡献)
+<sub>macOS · Chrome 142+ · 使用现有 Codex 登录 · MIT 开源许可 · 早期预览版</sub>
 
-![文章旁边的 Tabgent，选中的段落已作为引用加入会话](docs/assets/read-with-agent.png)
+## 功能演示
 
-## 你可以做什么
+### 比较多个网页
 
-| 你的任务         | Tabgent 如何帮助你                                           |
-| ---------------- | ------------------------------------------------------------ |
-| **理解网页**     | 选中一段文字并提问，引用内容和所在位置会随消息一起发送。     |
-| **阅读 PDF**     | 讨论段落、标注文字，并下载带注释的副本。                     |
-| **跨标签页研究** | 让智能助手阅读和比较当前窗口或所有浏览器窗口中的网页。       |
-| **操作网站**     | 浏览页面、填写表单、选择选项、检查结果，并查看工具执行过程。 |
+打开需要比较的页面，告诉 Tabgent 你关心什么。下面的例子是为七岁孩子选一家博物馆：它查阅两家官网，比较门票、预约要求和儿童活动，回答中附有来源链接。
 
-### 带着网页上下文阅读
+![V&A 官网旁，Tabgent 比较门票、预约要求和儿童活动](docs/assets/zh-CN/travel.png)
 
-直接问“这篇文章在讲什么？”，或者选中一段文字，问“解释一下这部分”。需要更多背景时，还可以附上图片、PDF 或文档。
+[查看完整示例 →](docs/features.zh-CN.md#安排一次出游) · [查看大图](docs/assets/zh-CN/travel.png)
 
-通过 **Page chats（网页会话）** 可以回到以前的会话。在某个网页发送消息后，这个会话就会与该网址关联，因此一个会话可以涵盖多个网页。
+### 阅读和标注 PDF
 
-### 把 PDF 带进会话
+打开 PDF 后，可以选中文字提问，也可以让 Tabgent 解释图表、标出重点。下图用《Attention Is All You Need》演示：解释第 3 页的架构图，并高亮相关原文。标注后的 PDF 可以下载保存。
 
-在线 PDF 会在内置的 PDF.js 阅读器中打开。选中段落即可引用，并附带页码和位置；你可以让助手解释或高亮标注。下载编辑后的 PDF，即可保留注释。
+![论文架构图和高亮原文，旁边是 Tabgent 的中文解释](docs/assets/zh-CN/pdf.png)
 
-![Tabgent 中引用的 PDF 段落及其旁边的源文档](docs/assets/chat-with-pdf.png)
+[了解 PDF 阅读、引用与标注 →](docs/features.zh-CN.md#使用-pdf) · [查看大图](docs/assets/zh-CN/pdf.png)
 
-如果文档无法在 PDF.js 中加载，仍可使用 Chrome 原生阅读器。扫描版 PDF 可能需要视觉阅读或 OCR，并非所有文档都能提取文字。
+### 操作网页
 
-### 比较标签页，不用来回复制
+Tabgent 可以点击按钮、填写表单、设置筛选条件。下图中，它按要求在 arXiv 输入标题关键词和发表年份，执行搜索后返回对应论文的链接。
 
-问一句“五人团队选哪个套餐更合适？”，让助手比较实际网页。通过 **Current window（当前窗口）** 或 **All windows（所有窗口）**，设置 Tabgent 浏览器工具的访问范围。
+![Tabgent 设置筛选条件后的 arXiv 搜索结果与匹配论文链接](docs/assets/zh-CN/act.png)
 
-![Tabgent 根据两个已打开的标签页比较套餐](docs/assets/compare-tabs.png)
+[查看网站操作示例 →](docs/features.zh-CN.md#让助手操作网站搜索) · [查看大图](docs/assets/zh-CN/act.png)
 
-### 让助手行动，随时掌握进展
+### 选中文字提问
 
-让助手填写表单、调整选项，或打开下一个网页。你可以查看工具调用、排队发送后续消息、在任务执行中补充指令，或停止任务。开始前，可以选择操作审批模式。
+选中一段网页文字后，可以直接在侧边栏提问，不用再复制粘贴。下图针对 Zotero 的同步说明提问：“为什么另一台电脑有文献，却没有 PDF？”回答给出了原因和排查步骤。
 
-![可见的浏览器操作过程：填写表单并在保存前停下](docs/assets/act-on-page.png)
+![选中的 Zotero 说明、带原文引用的提问与 Tabgent 的排查建议](docs/assets/zh-CN/read.png)
 
-<sub>截图展示扩展界面，内容为演示示例；外观可能与最新版本有所不同。</sub>
+[查看选中文字提问的示例 →](docs/features.zh-CN.md#读懂网页里的说明) · [查看大图](docs/assets/zh-CN/read.png)
 
-### 在会话中完成更多工作
+<sub>以上截图均为实际使用记录。中英文版分别录制，网页保留原本的语言；网页内容可能已更新。</sub>
 
-- **选择模型和推理强度**：直接在输入框旁设置。
-- **打开完整的 Agent 标签页**：为同一个会话提供更大的显示空间。
-- **点击 + 新建会话**：无需离开当前网页。
-- **输入 /**：使用技能、目标、模型选择和计划模式。
-- **展开工作记录**：查看工具调用、进度和推理摘要。
+## 更多功能
+
+- **[上传附件](docs/features.zh-CN.md#把相关材料一起交给助手)**：支持图片、PDF、Word（DOCX）和文本文件，可以结合当前网页提问。
+- **[会话历史](docs/features.zh-CN.md#让网页和会话保持关联)**：查看当前网址下的历史对话；从链接打开的会话会记录来处，点击可切换标签页。聊天也可以展开为独立页面。
+- **[补充要求或停止任务](docs/features.zh-CN.md#任务进行中也能随时调整)**：执行过程中可以继续发消息，用 Steer 调整当前任务，或点击停止。排队中的消息支持编辑和删除；操作位置和执行记录也可以查看。
+- **[计划与目标](docs/features.zh-CN.md#任务进行中也能随时调整)**：支持计划模式，也可以设置任务目标和 token 用量上限，并暂停或恢复目标。
+- **[模型与权限](docs/features.zh-CN.md#按你的习惯使用)**：选择模型、思考强度、操作批准方式，以及允许操作的浏览器窗口。
+- **[技能与工具](docs/features.zh-CN.md#按你的习惯使用)**：使用 Codex 中已有的技能、网页搜索和已连接的服务。回答可以复制，会话消息可以导出为 Markdown。
+
+部分功能需要相应的 Codex 版本、模型或配置支持。
+
+## 其他使用场景
+
+[收集每月发票](docs/use-cases.zh-CN.md#月底收发票不再逐个翻找) · [填写求职申请](docs/use-cases.zh-CN.md#申请工作少填一遍简历) · [比较房源](docs/use-cases.zh-CN.md#房源看得太多把条件放在一起比较)
+
+[查看七个场景的具体用法 →](docs/use-cases.zh-CN.md)
+
+这些场景提供了提问和操作建议，尚未逐一验证完整流程，实际效果取决于网站。
 
 ## 开始使用
 
-### 环境要求
+### 安装要求
 
 - **macOS**、**Chrome 142+** 和 **Python 3.9+**。
-- **已安装并登录 Codex**，且 app-server 版本兼容。参见[兼容性说明](docs/installation.md#requirements)。
+- **已安装并登录 Codex**，且版本兼容。参见[兼容性说明](docs/installation.md#requirements)。
 - 仓库处于私有状态期间，需要拥有该 GitHub 仓库的访问权限。
 
-Tabgent 使用你现有的 Codex 登录和配置。目前尚未提供 Chrome 应用商店安装，请使用以下任一方式在本地安装。
+Tabgent 使用你现有的 Codex 账号和配置，目前需要手动加载扩展，尚未上架 Chrome 应用商店。
 
 ### 方式一：让 Codex 帮你安装
 
-将下面的提示词复制到 Codex：
+<details>
+<summary>查看要发给 Codex 的安装说明</summary>
+
+将下面这段话复制到 Codex：
 
 ```text
 请从 https://github.com/FibonaAI/tabgent 安装 Tabgent。
@@ -91,7 +102,10 @@ ${CODEX_HOME:-$HOME/.codex}/plugins/tabgent/extension
 并告诉我实际验证了哪些内容。
 ```
 
-### 方式二：手动安装
+</details>
+
+<details>
+<summary>想手动安装？展开查看步骤</summary>
 
 1. 克隆或下载本仓库。
 2. 双击 **Install.command**，或在仓库根目录运行：
@@ -110,24 +124,26 @@ ${CODEX_HOME:-$HOME/.codex}/plugins/tabgent/extension
 
 4. 固定 Tabgent，打开一个网页，点击工具栏中的扩展图标。看到 **Codex connected** 后，试着问：**“总结一下这个网页。”**
 
+</details>
+
 **更新：** 等正在执行的任务结束后，重新运行安装程序，再到 `chrome://extensions` 重新加载 Tabgent。连接问题、自定义配置和卸载方法请参阅[安装与故障排查](docs/installation.md)。
 
 ## 隐私与控制
 
-- **自行选择审批方式：** Ask for approval（请求批准）、Approve for me（代为审批）或 Full access（完全访问）。
-- **自行选择浏览器范围：** 当前窗口或所有窗口。这一范围限制适用于 Tabgent 的浏览器工具，不适用于 Codex 原生工具或已配置的集成。
-- **沿用现有 Codex 配置：** 扩展通过本地连接器和 Codex app-server 工作。Tabgent 没有单独运营的云端后端。
-- **模型处理并非完全在本地进行：** 消息、提供的网页内容和任务中使用的附件，会发送到你配置的 Codex 服务。
+- **选择操作的批准方式：** Ask for approval（请求批准）、Approve for me（代为审批）或 Full access（完全访问）。
+- **选择助手可以使用的窗口：** 当前窗口或所有窗口。这项设置只限制 Tabgent 对浏览器的操作；Codex 的其他工具和已连接服务不受此设置限制。
+- **连接本机 Codex：** Tabgent 连接 Mac 上已安装的 Codex，没有单独处理会话的 Tabgent 云端服务。
+- **对话内容会发送到 Codex 服务：** 为了回答问题或执行任务，你的消息、提供的网页内容及使用的附件会发送到你配置的 Codex 服务，并非只在这台电脑上处理。
 
 数据流、存储位置和 Chrome 权限详见[隐私与权限](docs/privacy.md)。安全问题请按 [SECURITY.md](SECURITY.md) 中的方式报告。
 
 ## 当前限制
 
-Tabgent 仍处于早期预览阶段，**主要支持 macOS 和 Chrome**。部分 Codex 版本可能缺少所需的 app-server API。Tabgent 会话不会与 Codex 桌面端实时同步；重启浏览器后，标签页与会话的对应关系可能丢失，但会话历史仍可保留在存储中。
+Tabgent 仍处于早期预览阶段，**主要支持 macOS 和 Chrome**。部分旧版 Codex 可能需要更新。Tabgent 会话不会与 Codex 桌面端实时同步；重启浏览器后，历史会话可能仍然保留，但不一定能自动回到原来的标签页。
 
 ## 参与贡献
 
-欢迎提交问题报告、使用体验反馈，以及范围明确的 Pull Request。请先阅读[开发指南](docs/development.md)和[贡献指南](CONTRIBUTING.md)。
+欢迎反馈问题、提出建议或提交 Pull Request。参与开发前请阅读[开发指南](docs/development.md)和[贡献指南](CONTRIBUTING.md)。
 
 | 文档                             | 内容                       |
 | -------------------------------- | -------------------------- |
@@ -136,10 +152,10 @@ Tabgent 仍处于早期预览阶段，**主要支持 macOS 和 Chrome**。部分
 | [架构说明](docs/architecture.md) | 扩展与本地连接器的内部结构 |
 | [隐私与权限](docs/privacy.md)    | 数据处理和访问边界         |
 
-以上链接文档目前为英文。本 README 同时提供内容一致的 [English](README.md) 版本。
+本页和使用指南均提供中英文版本；上方技术文档目前为英文。
 
 ## 许可证
 
 采用 [MIT 许可证](LICENSE)。内置依赖保留各自的许可证，详见[第三方声明](THIRD_PARTY_NOTICES.md)。
 
-Tabgent 是独立项目，与 OpenAI 或 Google 没有关联。
+Tabgent 是独立项目，并非 OpenAI 或 Google 的官方产品。

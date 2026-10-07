@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-10-07T11:10:22.664Z",
+  "model": "gpt-6-astra",
+  "sources": [
+    "https://www.vam.ac.uk/south-kensington/visit",
+    "https://www.vam.ac.uk/young"
+  ],
+  "resultUrl": "https://www.vam.ac.uk/south-kensington/visit",
+  "prompt": "I am choosing between V&A South Kensington and Young V&A for a family day out with a 7-year-old. Read these open official pages. Compare free admission, booking requirements and what children can do. Recommend one based on these pages and link to visitor information. Do not book anything. Answer in English in under 150 words.",
+  "answers": [
+    "I’ll read the open official pages and compare admission, booking and activities for a 7-year-old.\nCopy",
+    "I’d choose Young V&A for a 7-year-old, because its focus on imagining, playing and designing makes it the stronger fit for a child-centred day.\n\n\n\n\nV&A South Kensington\nYoung V&A\n\n\n\nAdmission\nFree general admission; some exhibitions and events cost extra.\nFree general admission; some exhibitions may cost extra.\n\n\nBooking\nNo booking needed for general admission.\nNo booking needed for general admission.\n\n\nChildren can…\nExplore galleries using trails and take a garden break. The pond is currently closed.\nExplore Imagine, Play and Design galleries, discover the collections and enjoy creative play. Adult supervision is required.\n\n\nSouth Kensington suits a family keen on gallery exploration; Young V&A puts children’s creativity at the centre.\nVisitor information: South Kensington · Young V&A.\n"
+  ],
+  "transcript": "I am choosing between V&A South Kensington and Young V&A for a family day out with a 7-year-old. Read these open official pages. Compare free admission, booking requirements and what children can do. Recommend one based on these pages and link to visitor information. Do not book anything. Answer in English in under 150 words.\nWorked for 29s\n\nI’d choose Young V&A for a 7-year-old, because its focus on imagining, playing and designing makes it the stronger fit for a child-centred day.\n\n\tV&A South Kensington\tYoung V&A\nAdmission\tFree general admission; some exhibitions and events cost extra.\tFree general admission; some exhibitions may cost extra.\nBooking\tNo booking needed for general admission.\tNo booking needed for general admission.\nChildren can…\tExplore galleries using trails and take a garden break. The pond is currently closed.\tExplore Imagine, Play and Design galleries, discover the collections and enjoy creative play. Adult supervision is required.\n\nSouth Kensington suits a family keen on gallery exploration; Young V&A puts children’s creativity at the centre.\n\nVisitor information: South Kensington · Young V&A.\n\nCopy"
+}

@@ -1,0 +1,14 @@
+{
+  "capturedAt": "2026-10-07T10:21:53.431Z",
+  "model": "gpt-6-astra",
+  "sources": [
+    "https://www.zotero.org/support/sync"
+  ],
+  "resultUrl": "https://www.zotero.org/support/sync",
+  "prompt": "I have Zotero on two computers, but my PDFs are missing on the second one. Read this official page: what is the difference between data sync and file sync, and does the 300 MB limit apply to my references? Give me three practical checks, in English, under 130 words.",
+  "answers": [
+    "I’ll check the official page for the sync distinction and storage limit.\nCopy",
+    "According to Zotero’s official page, data sync transfers references, notes, links, and tags; it is free and unlimited. File sync transfers attachments such as PDFs through Zotero Storage or WebDAV. The 300 MB limit applies only to attached files in free Zotero Storage, not your references.\nThree practical checks:\n\nConfirm both computers use the same Zotero account in Sync preferences; manually sync the first, then the second.\nCheck that file syncing is enabled and configured consistently on both computers. For WebDAV, click Verify Server; group attachments require Zotero Storage.\nCheck whether your Zotero Storage attachments exceed 300 MB. If so, consider more storage or WebDAV for your personal library.\n\n"
+  ],
+  "transcript": "Syncing | Zotero Documentation\nWhile Zotero stores all data locally on your computer by default, Zotero’s sync functionality allows you to access your Zotero library on any computer with internet access. Zotero syncing has two parts: data syncing and file syncing.\nI have Zotero on two computers, but my PDFs are missing on the second one. Read this official page: what is the difference between data sync and file sync, and does the 300 MB limit apply to my references? Give me three practical checks, in English, under 130 words.\nWorked for 11s\n\nAccording to Zotero’s official page, data sync transfers references, notes, links, and tags; it is free and unlimited. File sync transfers attachments such as PDFs through Zotero Storage or WebDAV. The 300 MB limit applies only to attached files in free Zotero Storage, not your references.\n\nThree practical checks:\n\nConfirm both computers use the same Zotero account in Sync preferences; manually sync the first, then the second.\nCheck that file syncing is enabled and configured consistently on both computers. For WebDAV, click Verify Server; group attachments require Zotero Storage.\nCheck whether your Zotero Storage attachments exceed 300 MB. If so, consider more storage or WebDAV for your personal library.\nCopy"
+}

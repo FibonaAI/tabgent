@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-10-07T10:18:45.106Z",
+  "model": "gpt-6-astra",
+  "sources": [
+    "https://www.zotero.org/storage",
+    "https://www.zotero.org/support/sync"
+  ],
+  "resultUrl": "https://www.zotero.org/storage",
+  "prompt": "Read both open Zotero pages. I need to share 1 GB of PDFs with a research group. Compare Zotero Storage and WebDAV in a small table: group-file support, who supplies storage, and relevant costs. Recommend an option based only on these pages. Do not purchase anything. Answer in English, under 150 words.",
+  "answers": [
+    "I’ll read both open Zotero pages and compare their group-sharing support and costs.\nCopy",
+    "\n\n\nOption\nGroup-file support\nWho supplies storage\nRelevant costs\n\n\n\nZotero Storage\nYes; files count against the group owner’s quota\nZotero\n300 MB free; 2 GB costs US$20/year. No additional group charge.\n\n\nWebDAV\nNo; personal libraries only\nYour employer, research institution, or a third-party provider\nFree and paid options exist; these pages give no specific prices.\n\n\nRecommendation: Use Zotero Storage’s 2 GB plan for your 1 GB of group PDFs, provided the group owner’s other stored files fit within the remaining space. It supports group attachments; WebDAV does not.\nNo purchase was made.\n"
+  ],
+  "transcript": "Zotero | Storage\nZotero Storage\nRead both open Zotero pages. I need to share 1 GB of PDFs with a research group. Compare Zotero Storage and WebDAV in a small table: group-file support, who supplies storage, and relevant costs. Recommend an option based only on these pages. Do not purchase anything. Answer in English, under 150 words.\nWorked for 17s\nOption\tGroup-file support\tWho supplies storage\tRelevant costs\nZotero Storage\tYes; files count against the group owner’s quota\tZotero\t300 MB free; 2 GB costs US$20/year. No additional group charge.\nWebDAV\tNo; personal libraries only\tYour employer, research institution, or a third-party provider\tFree and paid options exist; these pages give no specific prices.\n\nRecommendation: Use Zotero Storage’s 2 GB plan for your 1 GB of group PDFs, provided the group owner’s other stored files fit within the remaining space. It supports group attachments; WebDAV does not.\n\nNo purchase was made.\n\nCopy"
+}

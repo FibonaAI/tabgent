@@ -1,0 +1,14 @@
+{
+  "capturedAt": "2026-10-07T11:05:43.413Z",
+  "model": "gpt-6-astra",
+  "sources": [
+    "https://www.bbcgoodfood.com/recipes/easy-pancakes"
+  ],
+  "resultUrl": "https://www.bbcgoodfood.com/recipes/easy-pancakes",
+  "prompt": "I only want to make 6 pancakes. Read this recipe and halve its quantities. Give me a short ingredient checklist and cooking steps, with the cooking time. Use only the recipe on this page. Answer in English in under 130 words.",
+  "answers": [
+    "I’ll read the recipe and halve the ingredients for 6 pancakes.\nCopy",
+    "For 6 pancakes (half the recipe):\n\n 50g plain flour\n 1 large egg\n 150ml milk\n ½ tbsp sunflower or vegetable oil, plus extra for frying\n ½ pinch of salt\n Optional: lemon wedges and caster sugar\n\n\nWhisk flour, egg, milk, oil and salt until smooth, with the consistency of single cream.\nRest for 30 minutes if time allows, or cook immediately.\nHeat a medium frying or crêpe pan over medium heat; wipe with oiled kitchen paper.\nUse about half a ladleful per pancake. Cook 1 minute per side until golden; keep warm in a low oven.\nServe with optional toppings.\n\nCooking time: approximately 12 minutes for six, cooked individually.\n"
+  ],
+  "transcript": "I only want to make 6 pancakes. Read this recipe and halve its quantities. Give me a short ingredient checklist and cooking steps, with the cooking time. Use only the recipe on this page. Answer in English in under 130 words.\nWorked for 17s\n\nFor 6 pancakes (half the recipe):\n\n50g plain flour\n1 large egg\n150ml milk\n½ tbsp sunflower or vegetable oil, plus extra for frying\n½ pinch of salt\nOptional: lemon wedges and caster sugar\nWhisk flour, egg, milk, oil and salt until smooth, with the consistency of single cream.\nRest for 30 minutes if time allows, or cook immediately.\nHeat a medium frying or crêpe pan over medium heat; wipe with oiled kitchen paper.\nUse about half a ladleful per pancake. Cook 1 minute per side until golden; keep warm in a low oven.\nServe with optional toppings.\n\nCooking time: approximately 12 minutes for six, cooked individually.\n\nCopy"
+}

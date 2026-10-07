@@ -1,0 +1,14 @@
+{
+  "capturedAt": "2026-10-07T10:18:00.668Z",
+  "model": "gpt-6-astra",
+  "sources": [
+    "https://arxiv.org/search/advanced"
+  ],
+  "resultUrl": "https://arxiv.org/search/advanced?advanced=1&terms-0-operator=AND&terms-0-term=%22Retrieval-Augmented+Generation%22&terms-0-field=title&classification-physics_archives=all&classification-include_cross_list=include&date-filter_by=specific_year&date-year=2020&date-from_date=&date-to_date=&date-date_type=submitted_date_first&abstracts=show&size=50&order=-announced_date_first",
+  "prompt": "请操作这个 arXiv 搜索表单，查找 2020 年标题包含 Retrieval-Augmented Generation 的原始论文。设置标题字段和年份，然后执行搜索。用中文简短给出匹配的标题和链接，不要使用其他搜索服务。",
+  "answers": [
+    "我会在当前 arXiv 表单中设置标题关键词和 2020 年范围，然后执行搜索。\nCopy",
+    "已按标题和原始提交年份 2020 执行搜索，共 2 条结果。所找的 RAG 原始论文是：\nRetrieval-Augmented Generation for Knowledge-Intensive NLP TasksPatrick Lewis 等，首次提交于 2020 年 5 月 22 日。\n"
+  ],
+  "transcript": "Advanced Search | arXiv e-print repository\nAdvanced Search\n请操作这个 arXiv 搜索表单，查找 2020 年标题包含 Retrieval-Augmented Generation 的原始论文。设置标题字段和年份，然后执行搜索。用中文简短给出匹配的标题和链接，不要使用其他搜索服务。\nWorked for 16s\n\n已按标题和原始提交年份 2020 执行搜索，共 2 条结果。所找的 RAG 原始论文是：\n\nRetrieval-Augmented Generation for Knowledge-Intensive NLP Tasks\nPatrick Lewis 等，首次提交于 2020 年 5 月 22 日。\n\nCopy"
+}

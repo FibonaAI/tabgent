@@ -4,72 +4,83 @@
 
 **Your agent in every tab.**
 
-Tabgent is a Chrome extension that brings **Codex into your browser sidebar**. Ask questions about the page you’re reading, compare open tabs, discuss PDFs, and let the agent navigate and interact with websites—all in the same conversation.
+Tabgent is a Chrome extension that puts Codex in your browser sidebar. It can read the current page, compare tabs, explain and annotate PDFs, and click, fill forms or search websites for you.
 
-**macOS · Chrome 142+ · Uses your Codex login · MIT licensed · Early preview**
+[**Get started →**](#get-started) · [See it in action](#see-tabgent-in-action) · [Use cases](docs/use-cases.md)
 
 **English** · [简体中文](README.zh-CN.md)
 
-[Get started](#get-started) · [What you can do](#what-you-can-do) · [Privacy & control](#privacy--control) · [Contribute](#contribute)
+<sub>macOS · Chrome 142+ · Uses your Codex login · Open source under MIT · Early preview</sub>
 
-![An article alongside Tabgent, with a selected passage quoted in the conversation](docs/assets/read-with-agent.png)
+## See Tabgent in action
 
-## What you can do
+### Compare multiple pages
 
-| Your task                | How Tabgent helps                                                                         |
-| ------------------------ | ----------------------------------------------------------------------------------------- |
-| **Understand a page**    | Select a passage and ask about it. The quote and its location accompany your message.     |
-| **Read a PDF**           | Discuss passages, highlight text, and download an annotated copy.                         |
-| **Research across tabs** | Ask the agent to read and compare pages in your current window or across browser windows. |
-| **Act on a website**     | Navigate, fill forms, choose options, and inspect the result, with visible tool activity. |
+Open the pages you want to compare and tell Tabgent what matters to you. This example compares two museums for a day out with a seven-year-old: admission, booking requirements and children's activities, with links to the official sources.
 
-### Read with the page in context
+![Official V&A pages beside Tabgent's comparison of admission, booking and children's activities](docs/assets/en/travel.png)
 
-Start with “What is this article saying?” or select a specific passage and ask “Explain this part.” Attach an image, PDF, or document when the answer needs more context.
+[See the multi-tab example →](docs/features.md#plan-a-day-out) · [Open full-size screenshot](docs/assets/en/travel.png)
 
-You can return to previous conversations from **Page chats**. A conversation becomes associated with a URL when you send a message on that page, so the same conversation can cover several pages.
+### Read and annotate PDFs
 
-### Make PDFs part of the conversation
+Open a PDF to ask about selected text or diagrams and highlight passages. In this example, Tabgent explains the architecture figure on page 3 of _Attention Is All You Need_ and highlights the relevant text. You can download the PDF with your annotations.
 
-Online PDFs open in the bundled PDF.js viewer. Select a passage to quote it with its page and position, ask for an explanation, or have the agent highlight it. Download the edited PDF to keep your annotations.
+![The Transformer architecture figure and highlighted source text beside Tabgent's explanation](docs/assets/en/pdf.png)
 
-![A PDF passage quoted in Tabgent beside its source document](docs/assets/chat-with-pdf.png)
+[PDF reading, citations and annotation →](docs/features.md#work-with-pdfs) · [Open full-size screenshot](docs/assets/en/pdf.png)
 
-If a document cannot load in PDF.js, Chrome’s native viewer remains available. Scanned PDFs may require visual reading or OCR; text extraction is not available for every document.
+### Use website controls
 
-### Compare without copying between tabs
+Tabgent can click buttons, fill forms and set filters. Here, it enters title keywords and a publication year in arXiv's advanced search, runs the search and returns a link to the matching paper.
 
-Ask “Which plan is best for a team of five?” and let the agent compare the live pages. Choose **Current window** or **All windows** to set the scope of Tabgent’s browser tools.
+![arXiv search results after Tabgent sets the filters and returns the matching paper](docs/assets/en/act.png)
 
-![Tabgent compares plans using two open tabs](docs/assets/compare-tabs.png)
+[See the website task →](docs/features.md#let-tabgent-search-a-website) · [Open full-size screenshot](docs/assets/en/act.png)
 
-### Take action, and stay in the loop
+### Ask about selected text
 
-Ask the agent to fill a form, change an option, or open the next page. Follow its tool calls, queue a follow-up, steer an active task, or stop it. Choose your approval mode before starting.
+Select text on a page and ask a question in the sidebar without copying and pasting. This example asks why Zotero references appeared on a second computer but PDFs did not. Tabgent explains the cause and suggests checks based on the documentation.
 
-![Visible browser actions fill a form and stop before saving](docs/assets/act-on-page.png)
+![Selected Zotero documentation beside the quoted passage and Tabgent's troubleshooting answer](docs/assets/en/read.png)
 
-<sub>Screenshots show the extension UI with illustrative demo content. Appearance may differ from the latest version.</sub>
+[See the selected-text example →](docs/features.md#understand-a-help-page) · [Open full-size screenshot](docs/assets/en/read.png)
 
-### Keep your workflow close
+<sub>Screenshots show actual Tabgent sessions. English and Chinese examples were recorded separately, with source pages in their original language. Website content may have changed.</sub>
 
-- **Choose the model and reasoning effort** from the composer.
-- **Open a full Agent tab** when you need more room for the same conversation.
-- **Start a fresh chat with +** without navigating away from the webpage.
-- **Use /** to access skills, goals, model selection, and Plan mode.
-- **Expand the work log** to inspect tool calls, progress, and reasoning summaries.
+## More features
+
+- **[File attachments](docs/features.md#give-tabgent-the-right-context):** Upload images, PDFs, Word documents (DOCX) or text files and ask questions about them alongside the current page.
+- **[Chat history](docs/features.md#keep-your-chats-connected):** Find conversations for the current URL. Chats opened from links record their origin, so you can switch between related tabs. You can also open a chat in a full-page view.
+- **[Follow-ups and task controls](docs/features.md#guide-a-task-as-it-runs):** Send messages while a task runs, use Steer to change the current task, or stop it. Edit or delete queued messages, and watch the pointer and activity log to see what is happening.
+- **[Plans and goals](docs/features.md#guide-a-task-as-it-runs):** Use Plan mode, or set a task goal with an optional token budget. Goals can be paused and resumed.
+- **[Models and permissions](docs/features.md#make-it-fit-your-work):** Choose a model, reasoning effort, approval mode and which browser windows Tabgent can use.
+- **[Skills and tools](docs/features.md#make-it-fit-your-work):** Use skills, web search and services already configured in Codex. Copy answers or export conversation messages as Markdown.
+
+Some features require a compatible Codex version, model or configuration.
+
+## Other use cases
+
+[Collect monthly invoices](docs/use-cases.md#collect-monthly-invoices-without-hunting-through-every-account) · [Fill a job application](docs/use-cases.md#apply-for-a-job-without-entering-your-resume-all-over-again) · [Compare rental listings](docs/use-cases.md#compare-rental-listings-without-losing-track-of-the-details)
+
+[Prompts and instructions for seven use cases →](docs/use-cases.md)
+
+These guides suggest ways to use Tabgent. The full workflows have not all been tested, and results depend on the website.
 
 ## Get started
 
 ### Requirements
 
 - **macOS**, **Chrome 142+**, and **Python 3.9+**.
-- **Codex installed and signed in**, with a compatible app-server. See [compatibility details](docs/installation.md#requirements).
+- **A compatible Codex installation, signed in.** See [compatibility details](docs/installation.md#requirements).
 - Access to this GitHub repository while it is private.
 
-Tabgent reuses your Codex authentication and configuration. There is currently no Chrome Web Store installation; install it locally using one of the options below.
+Tabgent uses your existing Codex login and settings. It is not yet listed in the Chrome Web Store; installation requires loading the extension locally.
 
 ### Option 1: Ask Codex to install it
+
+<details>
+<summary>Show the installation prompt to copy into Codex</summary>
 
 Copy this prompt into Codex:
 
@@ -91,7 +102,10 @@ clicks. Help resolve missing access, dependencies, or sign-in, and verify
 that the sidebar shows “Codex connected”. Report what you verified.
 ```
 
-### Option 2: Install manually
+</details>
+
+<details>
+<summary>Prefer to install manually?</summary>
 
 1. Clone or download this repository.
 2. Double-click **Install.command**, or run the following from the repository root:
@@ -110,24 +124,26 @@ that the sidebar shows “Codex connected”. Report what you verified.
 
 4. Pin Tabgent, open a webpage, and click its toolbar icon. Once you see **Codex connected**, try: **“Summarize this page.”**
 
+</details>
+
 **Updating:** rerun the installer and reload Tabgent in `chrome://extensions` after active tasks finish. See [installation and troubleshooting](docs/installation.md) for connection problems, custom setups, and uninstall instructions.
 
 ## Privacy & control
 
-- **You choose approval behavior:** Ask for approval, Approve for me, or Full access.
-- **You choose browser scope:** current window or all windows. This scope applies to Tabgent’s browser tools, not native Codex tools or configured integrations.
-- **Your existing Codex setup is reused:** the extension talks to a local connector and Codex app-server. Tabgent has no separate project-operated cloud backend.
-- **Model processing is not local-only:** messages, supplied page content, and attachments used in a task are sent to your configured Codex service.
+- **Choose how actions are approved:** Ask for approval, Approve for me, or Full access.
+- **Choose which windows the assistant can use:** the current window or all windows. This setting only limits Tabgent’s browser actions; it does not restrict other Codex tools or connected services.
+- **Connects to your local Codex installation:** Tabgent connects to Codex on your Mac. There is no separate Tabgent cloud service processing your conversations.
+- **Conversation content is sent to Codex:** to answer questions or carry out tasks, your messages, supplied page content and relevant attachments are sent to your configured Codex service. They are not processed solely on your computer.
 
 Read [Privacy & permissions](docs/privacy.md) for data flow, storage locations, and Chrome permissions. Report security concerns using [SECURITY.md](SECURITY.md).
 
 ## Current limits
 
-Tabgent is an early preview. **macOS and Chrome are the primary supported setup.** Some Codex versions may lack the required app-server APIs. Tabgent conversations do not synchronize live with Codex Desktop, and browser restarts can lose tab pairings even when conversation history remains stored.
+Tabgent is an early preview. **macOS and Chrome are the primary supported setup.** Some older Codex versions may need an update. Tabgent conversations do not synchronize live with Codex Desktop, and after a browser restart, saved conversations may no longer open their original tabs automatically.
 
 ## Contribute
 
-Bug reports, usability feedback, and focused pull requests are welcome. Start with the [development guide](docs/development.md) and [contribution guidelines](CONTRIBUTING.md).
+Bug reports, suggestions and pull requests are welcome. Start with the [development guide](docs/development.md) and [contribution guidelines](CONTRIBUTING.md).
 
 | Resource                                 | Contents                                     |
 | ---------------------------------------- | -------------------------------------------- |
@@ -136,7 +152,7 @@ Bug reports, usability feedback, and focused pull requests are welcome. Start wi
 | [Architecture](docs/architecture.md)     | Extension and native connector internals     |
 | [Privacy & permissions](docs/privacy.md) | Data handling and access boundaries          |
 
-The guides linked above are currently in English. This README is also available in [简体中文](README.zh-CN.md), with matching content.
+This page and the user guide are available in English and Simplified Chinese. The technical guides above are currently in English.
 
 ## License
 

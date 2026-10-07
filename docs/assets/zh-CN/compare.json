@@ -1,0 +1,15 @@
+{
+  "capturedAt": "2026-10-07T10:19:05.320Z",
+  "model": "gpt-6-astra",
+  "sources": [
+    "https://www.zotero.org/storage",
+    "https://www.zotero.org/support/sync"
+  ],
+  "resultUrl": "https://www.zotero.org/storage",
+  "prompt": "阅读已打开的两份 Zotero 官方页面。我需要和研究小组共享 1 GB 的 PDF。用小表格比较 Zotero Storage 与 WebDAV：是否支持群组文件、空间由谁提供、相关费用。仅根据这两个页面给出建议，不要购买。用中文简洁回答。",
+  "answers": [
+    "我会读取已打开的两份 Zotero 官方页面，比较群组共享支持、空间来源和费用。\nCopy",
+    "仅根据已打开的两份官方页面：\n\n\n\n比较项\nZotero Storage\nWebDAV\n\n\n\n支持群组文件？\n支持\n不支持，仅用于个人库\n\n\n空间由谁提供？\nZotero 提供；群组文件占用群组所有者的配额\n雇主、研究机构或第三方服务商\n\n\n相关费用\n300 MB 免费；2 GB 为 20 美元/年。群组使用不额外收费\n有免费和付费服务；页面未列具体价格\n\n\n依据：Storage 官方页、Syncing 官方文档。\n**建议：选 Zotero Storage。**共享 1 GB PDF 已超过免费额度，最低适用套餐为 2 GB（20 美元/年），前提是群组所有者的其他文件没有占满剩余空间。WebDAV 不适用于群组文件共享。未进行购买。\n"
+  ],
+  "transcript": "Zotero | Storage\nZotero Storage\n阅读已打开的两份 Zotero 官方页面。我需要和研究小组共享 1 GB 的 PDF。用小表格比较 Zotero Storage 与 WebDAV：是否支持群组文件、空间由谁提供、相关费用。仅根据这两个页面给出建议，不要购买。用中文简洁回答。\nWorked for 17s\n\n仅根据已打开的两份官方页面：\n\n比较项\tZotero Storage\tWebDAV\n支持群组文件？\t支持\t不支持，仅用于个人库\n空间由谁提供？\tZotero 提供；群组文件占用群组所有者的配额\t雇主、研究机构或第三方服务商\n相关费用\t300 MB 免费；2 GB 为 20 美元/年。群组使用不额外收费\t有免费和付费服务；页面未列具体价格\n\n依据：Storage 官方页、Syncing 官方文档。\n\n**建议：选 Zotero Storage。**共享 1 GB PDF 已超过免费额度，最低适用套餐为 2 GB（20 美元/年），前提是群组所有者的其他文件没有占满剩余空间。WebDAV 不适用于群组文件共享。未进行购买。\n\nCopy"
+}
