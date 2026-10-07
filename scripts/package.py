@@ -10,6 +10,7 @@ files = [
     root / name
     for name in (
         "README.md",
+        "README.zh-CN.md",
         "LICENSE",
         "THIRD_PARTY_NOTICES.md",
         "Install.command",

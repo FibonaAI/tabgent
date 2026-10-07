@@ -12,8 +12,8 @@
     "test": "npm run check && node scripts/test.cjs",
     "dev": "node scripts/launch-dev.cjs",
     "package": "python3 scripts/package.py",
-    "format": "prettier --write extension scripts .github docs README.md CONTRIBUTING.md SECURITY.md .prettierrc.json package.json",
-    "format:check": "prettier --check extension scripts .github docs README.md CONTRIBUTING.md SECURITY.md .prettierrc.json package.json",
+    "format": "prettier --write extension scripts .github docs README.md README.zh-CN.md CONTRIBUTING.md SECURITY.md .prettierrc.json package.json",
+    "format:check": "prettier --check extension scripts .github docs README.md README.zh-CN.md CONTRIBUTING.md SECURITY.md .prettierrc.json package.json",
     "test:browser": "node scripts/test-browser-input.cjs"
   },
   "devDependencies": {

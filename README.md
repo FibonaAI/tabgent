@@ -2,94 +2,144 @@
   <img src="docs/assets/wordmark.svg" width="196" height="44" alt="Tabgent">
 </h1>
 
-**Your agent in every tab.**
+**A browser agent that works beside you.**
 
-Read, research, and get things done with Codex—right beside your tabs.
+Tabgent is a Chrome extension that brings **Codex into your browser sidebar**. Ask questions about the page you’re reading, compare open tabs, discuss PDFs, and let the agent navigate and interact with websites—all in the same conversation.
 
-A Chrome sidebar with page context, visible tool activity, and a prewarmed Codex session for less waiting when you start a new conversation.
+**macOS · Chrome 142+ · Uses your Codex login · MIT licensed · Early preview**
 
-**macOS · Chrome 142+ · Uses your Codex login**
+**English** · [简体中文](README.zh-CN.md)
 
-## Understand what you’re reading
+[Get started](#get-started) · [What you can do](#what-you-can-do) · [Privacy & control](#privacy--control) · [Contribute](#contribute)
 
-Highlight a passage and ask a question. The quote and its page location travel with your message. Add screenshots, PDFs, or documents when you need more context.
+![An article alongside Tabgent, with a selected passage quoted in the conversation](docs/assets/read-with-agent.png)
 
-![Article beside Agent, with the selected passage in the composer](docs/assets/read-with-agent.png)
+## What you can do
 
-## Chat with PDF
+| Your task                | How Tabgent helps                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| **Understand a page**    | Select a passage and ask about it. The quote and its location accompany your message.     |
+| **Read a PDF**           | Discuss passages, highlight text, and download an annotated copy.                         |
+| **Research across tabs** | Ask the agent to read and compare pages in your current window or across browser windows. |
+| **Act on a website**     | Navigate, fill forms, choose options, and inspect the result, with visible tool activity. |
 
-Online PDFs open in the built-in PDF.js viewer. Select a passage and it appears in Agent automatically, with its page and position. Ask Codex to explain or highlight it, then download a PDF with your annotations. You can also attach a PDF.
+### Read with the page in context
 
-![PDF passage quoted in Agent with a follow-up question and the source document](docs/assets/chat-with-pdf.png)
+Start with “What is this article saying?” or select a specific passage and ask “Explain this part.” Attach an image, PDF, or document when the answer needs more context.
 
-<sub>If PDF.js cannot load a document, Chrome’s native viewer remains available: direct text reading up to 10 MB, screenshots, and right-click **Quote in Agent**. Scanned pages require visual reading or OCR.</sub>
+You can return to previous conversations from **Page chats**. A conversation becomes associated with a URL when you send a message on that page, so the same conversation can cover several pages.
 
-## Compare your open tabs
+### Make PDFs part of the conversation
 
-“Which plan is best for a team of five?” Let Codex read the live pages and compare them. Choose access to **this window** or **all browser windows**.
+Online PDFs open in the bundled PDF.js viewer. Select a passage to quote it with its page and position, ask for an explanation, or have the agent highlight it. Download the edited PDF to keep your annotations.
 
-![Agent reads open tabs and compares two plans](docs/assets/compare-tabs.png)
+![A PDF passage quoted in Tabgent beside its source document](docs/assets/chat-with-pdf.png)
 
-## Let the agent do the clicking
+If a document cannot load in PDF.js, Chrome’s native viewer remains available. Scanned PDFs may require visual reading or OCR; text extraction is not available for every document.
 
-Fill forms, choose options, navigate, and inspect results. Follow the tool calls as they happen—and ask the agent to stop before submitting.
+### Compare without copying between tabs
+
+Ask “Which plan is best for a team of five?” and let the agent compare the live pages. Choose **Current window** or **All windows** to set the scope of Tabgent’s browser tools.
+
+![Tabgent compares plans using two open tabs](docs/assets/compare-tabs.png)
+
+### Take action, and stay in the loop
+
+Ask the agent to fill a form, change an option, or open the next page. Follow its tool calls, queue a follow-up, steer an active task, or stop it. Choose your approval mode before starting.
 
 ![Visible browser actions fill a form and stop before saving](docs/assets/act-on-page.png)
 
-<sub>Screenshots show the actual extension UI with illustrative demo content, cropped to the relevant area.</sub>
+<sub>Screenshots show the extension UI with illustrative demo content. Appearance may differ from the latest version.</sub>
 
-Type **/** to choose a skill, set a goal, switch models or enter Plan mode. Expand the work log to inspect reasoning summaries, tool calls and progress.
+### Keep your workflow close
 
-## Why use this instead of the official extension?
+- **Choose the model and reasoning effort** from the composer.
+- **Open a full Agent tab** when you need more room for the same conversation.
+- **Start a fresh chat with +** without navigating away from the webpage.
+- **Use /** to access skills, goals, model selection, and Plan mode.
+- **Expand the work log** to inspect tool calls, progress, and reasoning summaries.
 
-The [official ChatGPT/Codex browser extension](https://learn.chatgpt.com/docs/chrome-extension) also offers side chat, selected-text context, and browser control. This project focuses on a customizable Codex workflow inside Chrome:
+## Get started
 
-| What you want                       | Tabgent                                                                            |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Discuss PDFs                        | Quote a passage from Chrome’s PDF viewer, or attach a PDF for page-by-page text reading.           |
-| Less waiting to start               | Keeps a spare app-server session and, when signed in, a thread prewarmed.                          |
-| More room for the same conversation | Open a full Agent tab; messages, drafts, and attachments stay synchronized with the sidebar.       |
-| A fresh take on the same page       | **+** starts a new chat in place, keeping the same webpage and settings. |
-| Control over the experience         | Open-source UI and connector; choose the model, reasoning effort, and window/browser scope.        |
+### Requirements
 
-Prewarming reduces startup work; it does not make model responses faster. No head-to-head speed benchmark is claimed. The official extension offers desktop-linked chats and broader app integrations; this project does not synchronize live conversations with Codex Desktop.
+- **macOS**, **Chrome 142+**, and **Python 3.9+**.
+- **Codex installed and signed in**, with a compatible app-server. See [compatibility details](docs/installation.md#requirements).
+- Access to this GitHub repository while it is private.
 
-## Try it
+Tabgent reuses your Codex authentication and configuration. There is currently no Chrome Web Store installation; install it locally using one of the options below.
 
-Requires **macOS, Python 3.9+, Chrome 142+, and Codex installed and signed in**.
+### Option 1: Ask Codex to install it
 
-### Ask Codex to install it
-
-Copy this into your Codex chat:
+Copy this prompt into Codex:
 
 ```text
-Install Tabgent for me from:
-https://github.com/FibonaAI/tabgent
+Install Tabgent from https://github.com/FibonaAI/tabgent.
 
 Check that this Mac has Python 3.9+, Chrome 142+, and a compatible Codex
-installation. Clone the repository into an unused local folder using my
-existing GitHub access, read its installation instructions, and run
-python3 extension/native/install.py from the repository root.
+installation. Clone the repository into an unused folder using my existing
+GitHub access, read docs/installation.md, and run:
+python3 extension/native/install.py
 
 Use my existing CODEX_HOME and Codex sign-in. Open chrome://extensions,
-enable Developer mode, load the installed extension from
-${CODEX_HOME:-$HOME/.codex}/plugins/tabgent/extension,
-and pin it. Use browser controls if available; otherwise guide me through
-only the remaining clicks. Keep my existing Chrome profile and tabs.
+enable Developer mode, and load the unpacked extension from:
+${CODEX_HOME:-$HOME/.codex}/plugins/tabgent/extension
 
-Open the Agent sidebar and verify it connects to Codex. If repository
-access, dependencies, or sign-in are missing, help me resolve that step
-and continue. Tell me whether installation and connection are verified.
+Pin it and open the Agent sidebar. Keep my existing Chrome profile and tabs.
+Use browser controls if available; otherwise guide me through the remaining
+clicks. Help resolve missing access, dependencies, or sign-in, and verify
+that the sidebar shows “Codex connected”. Report what you verified.
 ```
 
-The repository is currently private; your GitHub account needs access. Chrome loading or Codex sign-in may require a few manual steps.
+### Option 2: Install manually
 
-### Install manually
+1. Clone or download this repository.
+2. Double-click **Install.command**, or run the following from the repository root:
 
-1. Download this repository and double-click **Install.command**.
-2. Open `chrome://extensions`, enable **Developer mode**, then **Load unpacked** → `~/.codex/plugins/tabgent/extension`.
-3. Pin the extension and click its icon. Start chatting beside any webpage.
+   ```sh
+   python3 extension/native/install.py
+   ```
 
-[Installation help](docs/installation.md) · [Privacy & permissions](docs/privacy.md) · [Development](docs/development.md) · [Contributing](CONTRIBUTING.md)
+3. Open `chrome://extensions`, enable **Developer mode**, and choose **Load unpacked**. Select:
 
-<sub>Early preview. Page content and attachments used in a task are sent to your configured Codex service. Independent project, not affiliated with OpenAI or Google. [MIT license](LICENSE).</sub>
+   ```text
+   ~/.codex/plugins/tabgent/extension
+   ```
+
+   If you use a custom `CODEX_HOME`, select its `plugins/tabgent/extension` directory instead.
+
+4. Pin Tabgent, open a webpage, and click its toolbar icon. Once you see **Codex connected**, try: **“Summarize this page.”**
+
+**Updating:** rerun the installer and reload Tabgent in `chrome://extensions` after active tasks finish. See [installation and troubleshooting](docs/installation.md) for connection problems, custom setups, and uninstall instructions.
+
+## Privacy & control
+
+- **You choose approval behavior:** Ask for approval, Approve for me, or Full access.
+- **You choose browser scope:** current window or all windows. This scope applies to Tabgent’s browser tools, not native Codex tools or configured integrations.
+- **Your existing Codex setup is reused:** the extension talks to a local connector and Codex app-server. Tabgent has no separate project-operated cloud backend.
+- **Model processing is not local-only:** messages, supplied page content, and attachments used in a task are sent to your configured Codex service.
+
+Read [Privacy & permissions](docs/privacy.md) for data flow, storage locations, and Chrome permissions. Report security concerns using [SECURITY.md](SECURITY.md).
+
+## Current limits
+
+Tabgent is an early preview. **macOS and Chrome are the primary supported setup.** Some Codex versions may lack the required app-server APIs. Tabgent conversations do not synchronize live with Codex Desktop, and browser restarts can lose tab pairings even when conversation history remains stored.
+
+## Contribute
+
+Bug reports, usability feedback, and focused pull requests are welcome. Start with the [development guide](docs/development.md) and [contribution guidelines](CONTRIBUTING.md).
+
+| Resource                                 | Contents                                     |
+| ---------------------------------------- | -------------------------------------------- |
+| [Installation](docs/installation.md)     | Setup, updates, troubleshooting, and removal |
+| [Development](docs/development.md)       | Run locally, test, and package               |
+| [Architecture](docs/architecture.md)     | Extension and native connector internals     |
+| [Privacy & permissions](docs/privacy.md) | Data handling and access boundaries          |
+
+The guides linked above are currently in English. This README is also available in [简体中文](README.zh-CN.md), with matching content.
+
+## License
+
+[MIT](LICENSE). Bundled dependencies retain their own licenses; see [third-party notices](THIRD_PARTY_NOTICES.md).
+
+Tabgent is an independent project, not affiliated with OpenAI or Google.
