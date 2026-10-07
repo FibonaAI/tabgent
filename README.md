@@ -79,9 +79,6 @@ Tabgent uses your existing Codex login and settings. It is not yet listed in the
 
 ### Option 1: Ask Codex to install it
 
-<details>
-<summary>Show the installation prompt to copy into Codex</summary>
-
 Copy this prompt into Codex:
 
 ```text
@@ -94,7 +91,7 @@ python3 extension/native/install.py
 
 Use my existing CODEX_HOME and Codex sign-in. Open chrome://extensions,
 enable Developer mode, and load the unpacked extension from:
-${CODEX_HOME:-$HOME/.codex}/plugins/tabgent/extension
+~/Library/Application Support/Tabgent/extension
 
 Pin it and open the Agent sidebar. Keep my existing Chrome profile and tabs.
 Use browser controls if available; otherwise guide me through the remaining
@@ -102,10 +99,7 @@ clicks. Help resolve missing access, dependencies, or sign-in, and verify
 that the sidebar shows “Codex connected”. Report what you verified.
 ```
 
-</details>
-
-<details>
-<summary>Prefer to install manually?</summary>
+### Option 2: Install manually
 
 1. Clone or download this repository.
 2. Double-click **Install.command**, or run the following from the repository root:
@@ -117,14 +111,12 @@ that the sidebar shows “Codex connected”. Report what you verified.
 3. Open `chrome://extensions`, enable **Developer mode**, and choose **Load unpacked**. Select:
 
    ```text
-   ~/.codex/plugins/tabgent/extension
+   ~/Library/Application Support/Tabgent/extension
    ```
 
-   If you use a custom `CODEX_HOME`, select its `plugins/tabgent/extension` directory instead.
+   The installation path stays the same if you use a custom `CODEX_HOME`; that setting only selects your Codex account, configuration and data directory.
 
 4. Pin Tabgent, open a webpage, and click its toolbar icon. Once you see **Codex connected**, try: **“Summarize this page.”**
-
-</details>
 
 **Updating:** rerun the installer and reload Tabgent in `chrome://extensions` after active tasks finish. See [installation and troubleshooting](docs/installation.md) for connection problems, custom setups, and uninstall instructions.
 

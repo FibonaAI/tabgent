@@ -15,7 +15,7 @@ From the repository root, run `python3 extension/native/install.py` or double-cl
 `Install.command`. Load the installed directory in `chrome://extensions`:
 
 ```text
-~/.codex/plugins/tabgent/extension
+~/Library/Application Support/Tabgent/extension
 ```
 
 Enable Developer mode and choose Load unpacked. Pin the extension, then click
@@ -34,7 +34,7 @@ python3 extension/native/install.py --dev
 ```
 
 Load `<repository>/extension` directly. The Python host still gets copied into
-the plugin directory: Chrome may be blocked by macOS privacy controls from
+`~/Library/Application Support/Tabgent/`: Chrome may be blocked by macOS privacy controls from
 executing a Python file inside Documents or Desktop.
 
 ## Update
@@ -44,6 +44,20 @@ Rerun the same installer command, then reload the extension in
 stored separately; reloading a development extension can interrupt a running
 turn or its tab pairing.
 
+## Moving from the old installation directory
+
+Earlier versions installed Tabgent under `~/.codex/plugins/tabgent` (or the
+corresponding directory in a custom `CODEX_HOME`). After active tasks finish:
+
+1. Run the updated installer. It registers the connector at the new location.
+2. In `chrome://extensions`, use **Load unpacked** to select
+   `~/Library/Application Support/Tabgent/extension`. Reloading the old entry
+   alone does not change its source directory.
+3. Check that Tabgent connects and your conversations are available before
+   removing the old installation files. The installer leaves those files in place.
+
+Keep using the same `CODEX_HOME` to retain access to your Codex data.
+
 ## Custom Codex home
 
 ```sh
@@ -51,8 +65,9 @@ CODEX_HOME=/absolute/path/to/codex-home python3 extension/native/install.py
 ```
 
 The generated launcher remembers this location. Use the same home as the Codex
-installation whose account and conversations you want to use. `Install.command`
-also respects `CODEX_HOME` when opening the installed extension folder.
+installation whose account and conversations you want to use. This setting does
+not change the Tabgent installation path. `Install.command` opens
+`~/Library/Application Support/Tabgent/extension`.
 
 ## Troubleshooting
 
@@ -70,7 +85,7 @@ also respects `CODEX_HOME` when opening the installed extension folder.
 Remove the extension in Chrome. Delete the registration file named
 `com.tabgent.codex.json` from the relevant browser's
 `~/Library/Application Support/<browser>/NativeMessagingHosts/` directory.
-You may then remove `~/.codex/plugins/tabgent`.
+You may then remove `~/Library/Application Support/Tabgent`.
 
 The shared Codex conversation history and uploaded files in the project directory
 are retained. Do not delete the entire Codex home to uninstall this extension.

@@ -19,7 +19,7 @@ ext_id = "".join(
     chr(ord("a") + int(c, 16)) for c in hashlib.sha256(key).hexdigest()[:32]
 )
 codex_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")).resolve()
-home = codex_home / "plugins/tabgent"
+home = Path.home() / "Library/Application Support/Tabgent"
 home.mkdir(parents=True, exist_ok=True)
 os.chmod(home, 0o700)
 # Chrome-launched helpers must live outside macOS protected Documents folders.

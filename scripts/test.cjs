@@ -7,6 +7,7 @@ for (const file of [
   'selection-routing.mjs',
   'native-disconnect.mjs',
   'attachments.py',
+  'install.py',
   'selection.cjs',
   'pdf.cjs',
   'setup-ui.cjs',

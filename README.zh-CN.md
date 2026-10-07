@@ -79,9 +79,6 @@ Tabgent 使用你现有的 Codex 账号和配置，目前需要手动加载扩�
 
 ### 方式一：让 Codex 帮你安装
 
-<details>
-<summary>查看要发给 Codex 的安装说明</summary>
-
 将下面这段话复制到 Codex：
 
 ```text
@@ -94,7 +91,7 @@ python3 extension/native/install.py
 
 使用我现有的 CODEX_HOME 和 Codex 登录。打开 chrome://extensions，
 启用开发者模式，从以下目录加载已解压的扩展：
-${CODEX_HOME:-$HOME/.codex}/plugins/tabgent/extension
+~/Library/Application Support/Tabgent/extension
 
 固定扩展并打开 Agent 侧边栏。保留我现有的 Chrome 配置和标签页。
 如果可以控制浏览器，请直接操作；否则只引导我完成剩余点击。
@@ -102,10 +99,7 @@ ${CODEX_HOME:-$HOME/.codex}/plugins/tabgent/extension
 并告诉我实际验证了哪些内容。
 ```
 
-</details>
-
-<details>
-<summary>想手动安装？展开查看步骤</summary>
+### 方式二：手动安装
 
 1. 克隆或下载本仓库。
 2. 双击 **Install.command**，或在仓库根目录运行：
@@ -117,14 +111,12 @@ ${CODEX_HOME:-$HOME/.codex}/plugins/tabgent/extension
 3. 打开 `chrome://extensions`，启用**开发者模式**，选择**加载已解压的扩展程序**，然后选择：
 
    ```text
-   ~/.codex/plugins/tabgent/extension
+   ~/Library/Application Support/Tabgent/extension
    ```
 
-   如果使用自定义 `CODEX_HOME`，请改选该目录下的 `plugins/tabgent/extension`。
+   自定义 `CODEX_HOME` 不会改变这个安装位置；它只指定 Codex 的账号、配置和数据目录。
 
 4. 固定 Tabgent，打开一个网页，点击工具栏中的扩展图标。看到 **Codex connected** 后，试着问：**“总结一下这个网页。”**
-
-</details>
 
 **更新：** 等正在执行的任务结束后，重新运行安装程序，再到 `chrome://extensions` 重新加载 Tabgent。连接问题、自定义配置和卸载方法请参阅[安装与故障排查](docs/installation.md)。
 
