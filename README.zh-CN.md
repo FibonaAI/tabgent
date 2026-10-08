@@ -63,7 +63,7 @@ Tabgent 是一个 Chrome 扩展，让你在浏览器侧边栏使用 Codex。它�
   </tr>
 </table>
 
-<sub>动图来自未登录演示浏览器中的真实操作，已剪去部分等待画面。这批演示使用英文对话；[中文对话截图与详细示例](docs/features.zh-CN.md)也可查看。</sub>
+[中文对话截图与详细示例 →](docs/features.zh-CN.md)
 
 ## 更多功能
 

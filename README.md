@@ -63,8 +63,6 @@ Click any demo to view it full size.
   </tr>
 </table>
 
-<sub>Recorded in a signed-out demo browser with real pages and responses. Waiting time is shortened.</sub>
-
 [More examples and feature details →](docs/features.md)
 
 ## More features
