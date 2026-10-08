@@ -19,46 +19,46 @@ Tabgent 是一个 Chrome 扩展，让你在浏览器侧边栏使用 Codex。它�
 <table>
   <tr>
     <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/06-compare-pages.gif"><img src="docs/assets/demos/06-compare-pages.gif" alt="比较多个网页" width="180"></a><br>
-      <strong>比较多个网页</strong>
+      <a href="docs/assets/demos/11-ask-about-tabs.gif"><img src="docs/assets/demos/11-ask-about-tabs.gif" alt="询问网页内容" width="180"></a><br>
+      <strong>询问网页内容</strong>
     </td>
     <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/04-pdf-explain-highlight.gif"><img src="docs/assets/demos/04-pdf-explain-highlight.gif" alt="阅读标注 PDF" width="180"></a><br>
-      <strong>阅读标注 PDF</strong>
+      <a href="docs/assets/demos/12-hotel-comparison.gif"><img src="docs/assets/demos/12-hotel-comparison.gif" alt="比较酒店" width="180"></a><br>
+      <strong>比较酒店</strong>
+    </td>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/04-pdf-explain-highlight.gif"><img src="docs/assets/demos/04-pdf-explain-highlight.gif" alt="阅读标注论文" width="180"></a><br>
+      <strong>阅读标注论文</strong>
     </td>
     <td width="20%" align="center" valign="top">
       <a href="docs/assets/demos/03-github-code.gif"><img src="docs/assets/demos/03-github-code.gif" alt="导航讲解代码" width="180"></a><br>
       <strong>导航讲解代码</strong>
     </td>
     <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/05-fill-search-form.gif"><img src="docs/assets/demos/05-fill-search-form.gif" alt="自动填写表单" width="180"></a><br>
-      <strong>自动填写表单</strong>
-    </td>
-    <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/08-selected-text.gif"><img src="docs/assets/demos/08-selected-text.gif" alt="选中文字追问" width="180"></a><br>
-      <strong>选中文字追问</strong>
+      <a href="docs/assets/demos/05-fill-search-form.gif"><img src="docs/assets/demos/05-fill-search-form.gif" alt="填写搜索条件" width="180"></a><br>
+      <strong>填写搜索条件</strong>
     </td>
   </tr>
   <tr>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/13-manual.gif"><img src="docs/assets/demos/13-manual.gif" alt="查找说明书步骤" width="180"></a><br>
+      <strong>查找说明书步骤</strong>
+    </td>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/14-job-application.gif"><img src="docs/assets/demos/14-job-application.gif" alt="填写求职申请" width="180"></a><br>
+      <strong>填写求职申请</strong>
+    </td>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/15-event-registration.gif"><img src="docs/assets/demos/15-event-registration.gif" alt="填写报名表" width="180"></a><br>
+      <strong>填写报名表</strong>
+    </td>
     <td width="20%" align="center" valign="top">
       <a href="docs/assets/demos/07-recipe-quantities.gif"><img src="docs/assets/demos/07-recipe-quantities.gif" alt="换算食谱份量" width="180"></a><br>
       <strong>换算食谱份量</strong>
     </td>
     <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/02-current-tab.gif"><img src="docs/assets/demos/02-current-tab.gif" alt="问当前网页" width="180"></a><br>
-      <strong>问当前网页</strong>
-    </td>
-    <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/09-tab-conversations.gif"><img src="docs/assets/demos/09-tab-conversations.gif" alt="切换标签会话" width="180"></a><br>
-      <strong>切换标签会话</strong>
-    </td>
-    <td width="20%" align="center" valign="top">
       <a href="docs/assets/demos/10-page-history.gif"><img src="docs/assets/demos/10-page-history.gif" alt="找回历史对话" width="180"></a><br>
       <strong>找回历史对话</strong>
-    </td>
-    <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/01-one-click.gif"><img src="docs/assets/demos/01-one-click.gif" alt="一键启动" width="180"></a><br>
-      <strong>一键启动</strong>
     </td>
   </tr>
 </table>

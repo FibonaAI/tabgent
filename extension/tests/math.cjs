@@ -9,7 +9,7 @@ const { chromium } = require('playwright');
     .createServer((req, res) => {
       if (req.url === '/') {
         res.end(
-          '<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/vendor/katex/katex.min.css"><link rel="stylesheet" href="/ui/chat.css"><main style="padding:24px"><div class="message agent" id="fixture"></div></main>',
+          '<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="/vendor/katex/katex.min.css"><link rel="stylesheet" href="/vendor/highlight/github.css"><link rel="stylesheet" href="/vendor/highlight/github-dark.css" media="(prefers-color-scheme: dark)"><link rel="stylesheet" href="/ui/chat.css"><main style="padding:24px"><div class="message agent" id="fixture"></div></main>',
         );
         return;
       }
@@ -76,8 +76,78 @@ const { chromium } = require('playwright');
     );
     await render(String.raw`$\frac{1}{$`);
     assert.equal(await page.locator('.katex-error').count(), 1);
+    const python = 'def greet(name):\n    # Say hello\n    return "Hello " + name\n';
+    await render('```python\n' + python + '```');
+    assert.equal(await page.locator('pre code').textContent(), python);
+    assert.equal(await page.locator('pre code').getAttribute('class'), 'language-python');
+    assert(await page.locator('.hljs-keyword').count());
+    assert(await page.locator('.hljs-string').count());
+    assert(await page.locator('.hljs-comment').count());
+    const color = () =>
+      page
+        .locator('.hljs-keyword')
+        .first()
+        .evaluate((el) => getComputedStyle(el).color);
+    await page.emulateMedia({ colorScheme: 'light' });
+    const light = await color();
+    await page.screenshot({ path: '/tmp/tabgent-code-light.png' });
+    await page.emulateMedia({ colorScheme: 'dark' });
+    assert.notEqual(await color(), light);
+    await page.screenshot({ path: '/tmp/tabgent-code-dark.png' });
+    await render('```js\nconst value = "<img src=x onerror=alert(1)>";\n```');
+    assert(await page.locator('.hljs-keyword').count());
+    assert.equal(await page.locator('pre img, pre script').count(), 0);
+    assert((await page.locator('pre code').textContent()).includes('<img src=x onerror=alert(1)>'));
+    await render('```python\ndef unfinished(');
+    assert.equal(await page.locator('pre code').textContent(), 'def unfinished(\n');
+    await render('```unknown-language\nplain <text>\n```\n\n`const inline = 1`');
+    assert.equal(await page.locator('pre code').textContent(), 'plain <text>\n');
+    assert.equal(await page.locator('[class^="hljs-"]').count(), 0);
+    const structured = async (language, source) => {
+      await render('```' + language + '\n' + source + '\n```');
+      await page.evaluate(async () => {
+        const { addStructuredView } = await import('/ui/structured-code.js');
+        const pre = document.querySelector('pre');
+        const heading = document.createElement('div');
+        pre.before(heading);
+        addStructuredView(pre.parentElement, heading, pre, pre.querySelector('code'), (key) => key);
+      });
+      await page.locator('.structured-toggle').click();
+    };
+    await structured(
+      'json',
+      '{"user":{"name":"<img src=x onerror=alert(1)>"},"list":[1,true,null]}',
+    );
+    assert(await page.locator('pre').isHidden());
+    await page.getByText('user: {1}', { exact: true }).click();
+    await page.getByText('name: "<img src=x onerror=alert(1)>"', { exact: true }).waitFor();
+    assert.equal(await page.locator('.structured-tree img').count(), 0);
+    await page.locator('.structured-toggle').click();
+    assert(await page.locator('pre').isVisible());
+    assert(await page.locator('.structured-all').isHidden());
+    await page.locator('.structured-toggle').click();
+    assert(
+      await page.getByText('name: "<img src=x onerror=alert(1)>"', { exact: true }).isVisible(),
+    );
+    await structured('yaml', 'user:\n  name: Alex\n  active: true\ntags: [one, two]');
+    await page.getByText('user: {2}', { exact: true }).click();
+    await page.getByText('name: "Alex"', { exact: true }).waitFor();
+    await page.getByRole('button', { name: 'expandAll', exact: true }).click();
+    assert.equal(await page.locator('.structured-tree details:not([open])').count(), 0);
+    assert(await page.getByText('1: "two"', { exact: true }).isVisible());
+    await page.getByRole('button', { name: 'collapseAll', exact: true }).click();
+    assert.equal(await page.locator('.structured-tree details[open]').count(), 0);
+    await page.getByRole('button', { name: 'expandAll', exact: true }).click();
+    assert(await page.getByText('name: "Alex"', { exact: true }).isVisible());
+    await page.screenshot({ path: '/tmp/tabgent-structured.png' });
+    await structured('yml', 'loop: &loop\n  self: *loop');
+    await page.getByText('loop: {1}', { exact: true }).click();
+    await page.getByText('self: structuredReference', { exact: true }).waitFor();
+    await structured('json', '{"unfinished":');
+    assert(await page.locator('pre').isVisible());
+    assert(await page.locator('.structured-toggle').isDisabled());
     console.log(
-      'PASS display/inline math, fonts, currency, code fences, streaming, matrices, untrusted TeX and invalid syntax',
+      'PASS math, code highlighting, aliases, exact code text, streaming, fallback and untrusted content',
     );
   } finally {
     await browser?.close();

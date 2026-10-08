@@ -4,6 +4,7 @@ import { createRelations, isLineageNote } from './relations.js';
 import { createFollowups, selectionContextPrefix } from './followups.js';
 import { createCommands } from './commands.js';
 import { markdownFragment } from './markdown.js';
+import { addStructuredView } from './structured-code.js';
 import {
   bridge,
   pageHistory,
@@ -270,6 +271,7 @@ function markdown(target, text) {
     const copy = node('button', i18n('copy'), heading);
     copy.onclick = () => copyText(copy, code?.textContent || pre.textContent);
     block.append(pre);
+    addStructuredView(block, heading, pre, code, i18n);
   }
   for (const table of [...fragment.querySelectorAll('table')]) {
     const wrap = document.createElement('div');

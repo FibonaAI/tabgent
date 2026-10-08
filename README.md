@@ -19,46 +19,46 @@ Click any demo to view it full size.
 <table>
   <tr>
     <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/06-compare-pages.gif"><img src="docs/assets/demos/06-compare-pages.gif" alt="Compare pages" width="180"></a><br>
-      <strong>Compare pages</strong>
+      <a href="docs/assets/demos/11-ask-about-tabs.gif"><img src="docs/assets/demos/11-ask-about-tabs.gif" alt="Ask about tabs" width="180"></a><br>
+      <strong>Ask about tabs</strong>
     </td>
     <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/04-pdf-explain-highlight.gif"><img src="docs/assets/demos/04-pdf-explain-highlight.gif" alt="Read &amp; highlight PDFs" width="180"></a><br>
-      <strong>Read &amp; highlight PDFs</strong>
+      <a href="docs/assets/demos/12-hotel-comparison.gif"><img src="docs/assets/demos/12-hotel-comparison.gif" alt="Compare hotels" width="180"></a><br>
+      <strong>Compare hotels</strong>
     </td>
     <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/03-github-code.gif"><img src="docs/assets/demos/03-github-code.gif" alt="Explore code" width="180"></a><br>
-      <strong>Explore code</strong>
+      <a href="docs/assets/demos/04-pdf-explain-highlight.gif"><img src="docs/assets/demos/04-pdf-explain-highlight.gif" alt="Read &amp; highlight papers" width="180"></a><br>
+      <strong>Read &amp; highlight papers</strong>
     </td>
     <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/05-fill-search-form.gif"><img src="docs/assets/demos/05-fill-search-form.gif" alt="Fill forms" width="180"></a><br>
-      <strong>Fill forms</strong>
+      <a href="docs/assets/demos/03-github-code.gif"><img src="docs/assets/demos/03-github-code.gif" alt="Explore GitHub code" width="180"></a><br>
+      <strong>Explore GitHub code</strong>
     </td>
     <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/08-selected-text.gif"><img src="docs/assets/demos/08-selected-text.gif" alt="Ask about a selection" width="180"></a><br>
-      <strong>Ask about a selection</strong>
+      <a href="docs/assets/demos/05-fill-search-form.gif"><img src="docs/assets/demos/05-fill-search-form.gif" alt="Fill search forms" width="180"></a><br>
+      <strong>Fill search forms</strong>
     </td>
   </tr>
   <tr>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/13-manual.gif"><img src="docs/assets/demos/13-manual.gif" alt="Find steps in a manual" width="180"></a><br>
+      <strong>Find steps in a manual</strong>
+    </td>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/14-job-application.gif"><img src="docs/assets/demos/14-job-application.gif" alt="Fill a job application" width="180"></a><br>
+      <strong>Fill a job application</strong>
+    </td>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/15-event-registration.gif"><img src="docs/assets/demos/15-event-registration.gif" alt="Fill a registration form" width="180"></a><br>
+      <strong>Fill a registration form</strong>
+    </td>
     <td width="20%" align="center" valign="top">
       <a href="docs/assets/demos/07-recipe-quantities.gif"><img src="docs/assets/demos/07-recipe-quantities.gif" alt="Adjust a recipe" width="180"></a><br>
       <strong>Adjust a recipe</strong>
     </td>
     <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/02-current-tab.gif"><img src="docs/assets/demos/02-current-tab.gif" alt="Ask this page" width="180"></a><br>
-      <strong>Ask this page</strong>
-    </td>
-    <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/09-tab-conversations.gif"><img src="docs/assets/demos/09-tab-conversations.gif" alt="Switch tab chats" width="180"></a><br>
-      <strong>Switch tab chats</strong>
-    </td>
-    <td width="20%" align="center" valign="top">
       <a href="docs/assets/demos/10-page-history.gif"><img src="docs/assets/demos/10-page-history.gif" alt="Revisit past chats" width="180"></a><br>
       <strong>Revisit past chats</strong>
-    </td>
-    <td width="20%" align="center" valign="top">
-      <a href="docs/assets/demos/01-one-click.gif"><img src="docs/assets/demos/01-one-click.gif" alt="Launch in one click" width="180"></a><br>
-      <strong>Launch in one click</strong>
     </td>
   </tr>
 </table>

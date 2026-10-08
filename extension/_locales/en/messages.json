@@ -783,5 +783,26 @@
   },
   "helperSourceInstall": {
     "message": "Open Terminal in the Tabgent source folder and run:"
+  },
+  "showStructured": {
+    "message": "Show collapsible view"
+  },
+  "showCode": {
+    "message": "Show code"
+  },
+  "structuredUnavailable": {
+    "message": "Cannot show a tree: check the syntax or use a smaller code block."
+  },
+  "structuredLimit": {
+    "message": "More items omitted. Switch to code to see everything."
+  },
+  "structuredReference": {
+    "message": "[Circular reference]"
+  },
+  "expandAll": {
+    "message": "Expand all"
+  },
+  "collapseAll": {
+    "message": "Collapse all"
   }
 }

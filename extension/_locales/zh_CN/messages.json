@@ -4,5 +4,26 @@
   },
   "extensionDescription": {
     "message": "在 Chrome 中使用 Codex，阅读网页、比较标签页、处理 PDF。需要 macOS、Codex 和本地连接器。"
+  },
+  "showStructured": {
+    "message": "切换到折叠视图"
+  },
+  "showCode": {
+    "message": "切换到代码视图"
+  },
+  "structuredUnavailable": {
+    "message": "无法显示折叠视图，请检查语法或缩短代码块。"
+  },
+  "structuredLimit": {
+    "message": "其余内容已省略，切回代码可查看全部。"
+  },
+  "structuredReference": {
+    "message": "[循环引用]"
+  },
+  "expandAll": {
+    "message": "展开全部"
+  },
+  "collapseAll": {
+    "message": "折叠全部"
   }
 }

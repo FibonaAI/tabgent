@@ -19,3 +19,10 @@ They render and sanitize conversation Markdown locally; no CDN is used.
 
 KaTeX 0.19.0 is bundled in `extension/vendor/katex/` under the MIT license.
 Its fonts and stylesheet are included for offline mathematical typesetting.
+
+Highlight.js 11.12.0 is bundled from `@highlightjs/cdn-assets` in
+`extension/vendor/highlight/` under BSD-3-Clause. Its common-language ESM build
+and GitHub light/dark themes provide local code-block syntax highlighting.
+
+YAML 2.9.1 by Eemeli Aro is bundled in `extension/vendor/yaml/` under ISC.
+Its browser ESM build parses YAML locally for the collapsible code view.

@@ -1,6 +1,7 @@
 import { Marked } from '../vendor/marked/marked.js';
 import DOMPurify from '../vendor/dompurify/purify.js';
 import katex from '../vendor/katex/katex.mjs';
+import hljs from '../vendor/highlight/highlight.js';
 
 // Tokenize before Markdown consumes the backslashes in \(...\) and \[...\].
 // Code spans and fences remain ordinary Markdown tokens, never math.
@@ -58,6 +59,16 @@ export function markdownFragment(text) {
     FORBID_TAGS: ['img', 'style', 'input', 'button', 'form', 'iframe', 'svg', 'video', 'audio'],
     FORBID_ATTR: ['style', 'id', 'name'],
   });
+  for (const code of fragment.querySelectorAll('pre code')) {
+    const language = [...code.classList]
+      .find((name) => name.startsWith('language-'))
+      ?.slice('language-'.length);
+    // Keep unknown languages and very large blocks cheap during streaming.
+    if (!language || !hljs.getLanguage(language) || code.textContent.length > 100_000) continue;
+    code.innerHTML = DOMPurify.sanitize(
+      hljs.highlight(code.textContent, { language, ignoreIllegals: true }).value,
+    );
+  }
   // Only our generated placeholders get renderer markup. Untrusted Markdown
   // cannot supply styles/SVG; KaTeX's trusted commands stay disabled.
   for (const element of fragment.querySelectorAll(`[data-${marker}]`)) {
