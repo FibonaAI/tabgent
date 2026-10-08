@@ -14,39 +14,81 @@ Tabgent 是一个 Chrome 扩展，让你在浏览器侧边栏使用 Codex。它�
 
 ## 功能演示
 
-### 比较多个网页
+点击动图可查看大图。
 
-打开需要比较的页面，告诉 Tabgent 你关心什么。下面的例子是为七岁孩子选一家博物馆：它查阅两家官网，比较门票、预约要求和儿童活动，回答中附有来源链接。
+### 1. 直接问当前网页
 
-![V&A 官网旁，Tabgent 比较门票、预约要求和儿童活动](docs/assets/zh-CN/travel.png)
+不用复制网址或粘贴网页内容，打开侧边栏就能问。
 
-[查看完整示例 →](docs/features.zh-CN.md#安排一次出游) · [查看大图](docs/assets/zh-CN/travel.png)
+[![直接问当前网页](docs/assets/demos/02-current-tab.gif)](docs/assets/demos/02-current-tab.gif)
 
-### 阅读和标注 PDF
+### 2. 在 GitHub 找到代码、看懂实现
 
-打开 PDF 后，可以选中文字提问，也可以让 Tabgent 解释图表、标出重点。下图用《Attention Is All You Need》演示：解释第 3 页的架构图，并高亮相关原文。标注后的 PDF 可以下载保存。
+想知道某个功能写在哪里？让 Tabgent 打开文件、定位代码行并解释。
 
-![论文架构图和高亮原文，旁边是 Tabgent 的中文解释](docs/assets/zh-CN/pdf.png)
+[![在 GitHub 找到代码、看懂实现](docs/assets/demos/03-github-code.gif)](docs/assets/demos/03-github-code.gif)
 
-[了解 PDF 阅读、引用与标注 →](docs/features.zh-CN.md#使用-pdf) · [查看大图](docs/assets/zh-CN/pdf.png)
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>3. 读论文，直接标出解释依据</strong>
+      <p>解释《Attention Is All You Need》的 Figure 1，并高亮相关原文。</p>
+      <a href="docs/assets/demos/04-pdf-explain-highlight.gif"><img src="docs/assets/demos/04-pdf-explain-highlight.gif" alt="读论文，直接标出解释依据" width="480"></a>
+    </td>
+    <td width="50%" valign="top">
+      <strong>4. 把搜索条件交给助手填写</strong>
+      <p>查找原始 RAG 论文：填写标题关键词和年份，再执行搜索。</p>
+      <a href="docs/assets/demos/05-fill-search-form.gif"><img src="docs/assets/demos/05-fill-search-form.gif" alt="把搜索条件交给助手填写" width="480"></a>
+    </td>
+  </tr>
+</table>
 
-### 操作网页
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>5. 比较打开的网页再做决定</strong>
+      <p>带七岁孩子去哪家 V&A？比较门票、预约要求和活动。</p>
+      <a href="docs/assets/demos/06-compare-pages.gif"><img src="docs/assets/demos/06-compare-pages.gif" alt="比较打开的网页再做决定" width="480"></a>
+    </td>
+    <td width="50%" valign="top">
+      <strong>6. 选中看不懂的地方，直接追问</strong>
+      <p>文献同步了，PDF 却没有？选中说明，直接问原因。</p>
+      <a href="docs/assets/demos/08-selected-text.gif"><img src="docs/assets/demos/08-selected-text.gif" alt="选中看不懂的地方，直接追问" width="480"></a>
+    </td>
+  </tr>
+</table>
 
-Tabgent 可以点击按钮、填写表单、设置筛选条件。下图中，它按要求在 arXiv 输入标题关键词和发表年份，执行搜索后返回对应论文的链接。
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>7. 切换标签页，接着聊各自的话题</strong>
+      <p>在食谱和帮助页面之间切换，各自的对话会跟着回来。</p>
+      <a href="docs/assets/demos/09-tab-conversations.gif"><img src="docs/assets/demos/09-tab-conversations.gif" alt="切换标签页，接着聊各自的话题" width="480"></a>
+    </td>
+    <td width="50%" valign="top">
+      <strong>8. 找回这个网页上问过的问题</strong>
+      <p>打开会话历史，找回之前问过的食材用量清单。</p>
+      <a href="docs/assets/demos/10-page-history.gif"><img src="docs/assets/demos/10-page-history.gif" alt="找回这个网页上问过的问题" width="480"></a>
+    </td>
+  </tr>
+</table>
 
-![Tabgent 设置筛选条件后的 arXiv 搜索结果与匹配论文链接](docs/assets/zh-CN/act.png)
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>9. 点一下，助手就在旁边</strong>
+      <p>点击工具栏图标即可打开，不用离开正在浏览的网站。</p>
+      <a href="docs/assets/demos/01-one-click.gif"><img src="docs/assets/demos/01-one-click.gif" alt="点一下，助手就在旁边" width="480"></a>
+    </td>
+    <td width="50%" valign="top">
+      <strong>10. 按要做的份量换算食谱</strong>
+      <p>食谱能做十二张薄饼，只想做六张？直接得到减半后的食材清单。</p>
+      <a href="docs/assets/demos/07-recipe-quantities.gif"><img src="docs/assets/demos/07-recipe-quantities.gif" alt="按要做的份量换算食谱" width="480"></a>
+    </td>
+  </tr>
+</table>
 
-[查看网站操作示例 →](docs/features.zh-CN.md#让助手操作网站搜索) · [查看大图](docs/assets/zh-CN/act.png)
-
-### 选中文字提问
-
-选中一段网页文字后，可以直接在侧边栏提问，不用再复制粘贴。下图针对 Zotero 的同步说明提问：“为什么另一台电脑有文献，却没有 PDF？”回答给出了原因和排查步骤。
-
-![选中的 Zotero 说明、带原文引用的提问与 Tabgent 的排查建议](docs/assets/zh-CN/read.png)
-
-[查看选中文字提问的示例 →](docs/features.zh-CN.md#读懂网页里的说明) · [查看大图](docs/assets/zh-CN/read.png)
-
-<sub>以上截图均为实际使用记录。中英文版分别录制，网页保留原本的语言；网页内容可能已更新。</sub>
+<sub>动图来自未登录演示浏览器中的真实操作，已剪去部分等待画面。这批演示使用英文对话；[中文对话截图与详细示例](docs/features.zh-CN.md)也可查看。</sub>
 
 ## 更多功能
 

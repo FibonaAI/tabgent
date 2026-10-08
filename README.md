@@ -14,39 +14,83 @@ Tabgent is a Chrome extension that puts Codex in your browser sidebar. It can re
 
 ## See Tabgent in action
 
-### Compare multiple pages
+Click any demo to view it full size.
 
-Open the pages you want to compare and tell Tabgent what matters to you. This example compares two museums for a day out with a seven-year-old: admission, booking requirements and children's activities, with links to the official sources.
+### 1. Ask about the page you’re on
 
-![Official V&A pages beside Tabgent's comparison of admission, booking and children's activities](docs/assets/en/travel.png)
+No copying URLs or pasting page content. Open the sidebar and ask.
 
-[See the multi-tab example →](docs/features.md#plan-a-day-out) · [Open full-size screenshot](docs/assets/en/travel.png)
+[![Ask about the page you’re on](docs/assets/demos/02-current-tab.gif)](docs/assets/demos/02-current-tab.gif)
 
-### Read and annotate PDFs
+### 2. Find and understand code on GitHub
 
-Open a PDF to ask about selected text or diagrams and highlight passages. In this example, Tabgent explains the architecture figure on page 3 of _Attention Is All You Need_ and highlights the relevant text. You can download the PDF with your annotations.
+Ask where something happens. Tabgent opens the file, finds the lines and explains them.
 
-![The Transformer architecture figure and highlighted source text beside Tabgent's explanation](docs/assets/en/pdf.png)
+[![Find and understand code on GitHub](docs/assets/demos/03-github-code.gif)](docs/assets/demos/03-github-code.gif)
 
-[PDF reading, citations and annotation →](docs/features.md#work-with-pdfs) · [Open full-size screenshot](docs/assets/en/pdf.png)
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>3. Read a paper with the evidence beside you</strong>
+      <p>Explain Figure 1 in Attention Is All You Need and highlight the passage behind it.</p>
+      <a href="docs/assets/demos/04-pdf-explain-highlight.gif"><img src="docs/assets/demos/04-pdf-explain-highlight.gif" alt="Read a paper with the evidence beside you" width="480"></a>
+    </td>
+    <td width="50%" valign="top">
+      <strong>4. Let Tabgent fill the search form</strong>
+      <p>Find the original RAG paper: enter its title keywords and year, then run the search.</p>
+      <a href="docs/assets/demos/05-fill-search-form.gif"><img src="docs/assets/demos/05-fill-search-form.gif" alt="Let Tabgent fill the search form" width="480"></a>
+    </td>
+  </tr>
+</table>
 
-### Use website controls
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>5. Compare open tabs before deciding</strong>
+      <p>Which V&A museum suits a seven-year-old? Compare admission, booking and activities.</p>
+      <a href="docs/assets/demos/06-compare-pages.gif"><img src="docs/assets/demos/06-compare-pages.gif" alt="Compare open tabs before deciding" width="480"></a>
+    </td>
+    <td width="50%" valign="top">
+      <strong>6. Ask about the part you selected</strong>
+      <p>References synced, but PDFs didn’t? Select the documentation and ask why.</p>
+      <a href="docs/assets/demos/08-selected-text.gif"><img src="docs/assets/demos/08-selected-text.gif" alt="Ask about the part you selected" width="480"></a>
+    </td>
+  </tr>
+</table>
 
-Tabgent can click buttons, fill forms and set filters. Here, it enters title keywords and a publication year in arXiv's advanced search, runs the search and returns a link to the matching paper.
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>7. Switch tabs without losing your place</strong>
+      <p>Move between a recipe and a help page. Each tab brings back its conversation.</p>
+      <a href="docs/assets/demos/09-tab-conversations.gif"><img src="docs/assets/demos/09-tab-conversations.gif" alt="Switch tabs without losing your place" width="480"></a>
+    </td>
+    <td width="50%" valign="top">
+      <strong>8. Find an earlier answer on the same page</strong>
+      <p>Open Page chats and return to the ingredient checklist you asked for earlier.</p>
+      <a href="docs/assets/demos/10-page-history.gif"><img src="docs/assets/demos/10-page-history.gif" alt="Find an earlier answer on the same page" width="480"></a>
+    </td>
+  </tr>
+</table>
 
-![arXiv search results after Tabgent sets the filters and returns the matching paper](docs/assets/en/act.png)
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <strong>9. Open your agent in one click</strong>
+      <p>Start from the toolbar without leaving the website.</p>
+      <a href="docs/assets/demos/01-one-click.gif"><img src="docs/assets/demos/01-one-click.gif" alt="Open your agent in one click" width="480"></a>
+    </td>
+    <td width="50%" valign="top">
+      <strong>10. Make a recipe work for your table</strong>
+      <p>A recipe makes twelve pancakes; you only need six. Get the adjusted ingredient list.</p>
+      <a href="docs/assets/demos/07-recipe-quantities.gif"><img src="docs/assets/demos/07-recipe-quantities.gif" alt="Make a recipe work for your table" width="480"></a>
+    </td>
+  </tr>
+</table>
 
-[See the website task →](docs/features.md#let-tabgent-search-a-website) · [Open full-size screenshot](docs/assets/en/act.png)
+<sub>Recorded in a signed-out demo browser with real pages and responses. Waiting time is shortened.</sub>
 
-### Ask about selected text
-
-Select text on a page and ask a question in the sidebar without copying and pasting. This example asks why Zotero references appeared on a second computer but PDFs did not. Tabgent explains the cause and suggests checks based on the documentation.
-
-![Selected Zotero documentation beside the quoted passage and Tabgent's troubleshooting answer](docs/assets/en/read.png)
-
-[See the selected-text example →](docs/features.md#understand-a-help-page) · [Open full-size screenshot](docs/assets/en/read.png)
-
-<sub>Screenshots show actual Tabgent sessions. English and Chinese examples were recorded separately, with source pages in their original language. Website content may have changed.</sub>
+[More examples and feature details →](docs/features.md)
 
 ## More features
 
