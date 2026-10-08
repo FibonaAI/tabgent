@@ -155,7 +155,25 @@ chrome.runtime.onMessage.addListener((m,s,reply)=>{
       (await run({ action: 'selectText', page: 1, text: 'Read directly from PDF.', occurrence: 2 }))
         .error,
     );
+    // PDF.js creates spans before attaching a text layer. A render can also
+    // replace that layer while an Agent selection is waiting.
+    await viewer
+      .locator('.textLayer')
+      .first()
+      .evaluate((layer) => {
+        getSelection().removeAllRanges();
+        const view = window.PDFViewerApplication.pdfViewer.getPageView(0);
+        view.textLayer.div = layer.cloneNode(true);
+        setTimeout(() => {
+          view.textLayer.div = layer;
+        }, 150);
+      });
     assert((await run({ action: 'selectText', page: 1, text: 'Read directly from PDF.' })).success);
+    assert.equal(
+      await viewer.locator('body').evaluate(() => getSelection().toString()),
+      'Read directly from PDF.',
+      'Selection waits for the current text layer to belong to the document',
+    );
     assert((await run({ action: 'highlight', page: 1, text: 'Read directly from PDF.' })).success);
     await viewer.locator('.highlightEditor').first().waitFor({ timeout: 5000 });
     const downloaded = page.waitForEvent('download');

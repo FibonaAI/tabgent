@@ -137,9 +137,15 @@ async function operate(args) {
   if (typeof args.text !== 'string' || !args.text.trim()) throw Error('Text is required');
   app.pdfViewer.scrollPageIntoView({ pageNumber });
   const view = app.pdfViewer.getPageView(pageNumber - 1);
-  for (let i = 0; i < 100 && !view.textLayer?.div?.querySelector('span'); i++)
+  let layer;
+  for (let i = 0; i < 100; i++) {
+    // PDF.js populates spans before attaching the layer and may replace it
+    // during rendering. Only select from the current, attached layer.
+    layer = view.textLayer?.div;
+    if (frame.contentDocument.contains(layer) && layer.querySelector('span')) break;
+    layer = null;
     await new Promise((resolve) => setTimeout(resolve, 50));
-  const layer = view.textLayer?.div;
+  }
   if (!layer) throw Error('PDF text layer unavailable');
   const walker = frame.contentDocument.createTreeWalker(layer, NodeFilter.SHOW_TEXT);
   const points = [],
@@ -169,6 +175,7 @@ async function operate(args) {
   const selection = frame.contentWindow.getSelection();
   selection.removeAllRanges();
   selection.addRange(range);
+  if (!selection.rangeCount || selection.isCollapsed) throw Error('PDF text selection failed');
   from.node.parentElement.scrollIntoView({ block: 'center' });
   capture();
   if (args.action === 'highlight')
