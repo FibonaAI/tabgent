@@ -8,6 +8,7 @@ for (const file of [
   'native-disconnect.mjs',
   'attachments.py',
   'install.py',
+  'store-setup.cjs',
   'selection.cjs',
   'pdf.cjs',
   'setup-ui.cjs',

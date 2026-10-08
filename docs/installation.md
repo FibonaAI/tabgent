@@ -27,6 +27,20 @@ for Chrome, Chrome for Testing, Chromium, Edge, and Brave. Only Chrome is the
 primary tested browser. A custom browser profile may need its own native-host
 registration. A browser restart can be necessary after registering a host.
 
+## Connector-only installation
+
+For a store-managed extension, install the local connector without copying an
+unpacked extension:
+
+```sh
+python3 extension/native/install.py --connector-only --extension-id YOUR_STORE_EXTENSION_ID
+```
+
+Use the actual 32-character ID assigned by Chrome Web Store. The ID is validated
+before any files are written. Packaged connector builds include it automatically.
+For local development, omit `--extension-id` to use the development manifest key.
+See [store release preparation](store/README.md) for build and publication status.
+
 ## Development installation
 
 ```sh

@@ -305,19 +305,19 @@
     "message": "Connect Codex on this computer"
   },
   "helperHint": {
-    "message": "Install the small local connector included with this extension. Your chats and Codex sign-in stay on this computer."
+    "message": "Tabgent needs a local connector to communicate with Codex on your Mac. Install it once, then return to your chat."
   },
   "helperAction": {
     "message": "Set up connector"
   },
   "helperStepOne": {
-    "message": "Run “Install Connector.command” from the extension’s native folder."
+    "message": "Download and unzip the connector package, then run Install Connector.command."
   },
   "helperStepTwo": {
-    "message": "Return to your chat and choose Check again. If Codex is missing, the next step will guide you through installation."
+    "message": "Return to your chat and choose Check again. Tabgent will then check your Codex installation and guide you through sign-in if needed."
   },
   "helperPrivacy": {
-    "message": "The connector only connects this extension to the local Codex app-server. No API key is required."
+    "message": "Messages, requested page content, screenshots and relevant attachments are sent through Codex to your configured service. They are not processed only on your computer. Tabgent has no separate cloud service processing your chats."
   },
   "actionFrames": {
     "message": "List frames"
@@ -768,5 +768,20 @@
   },
   "historyUnavailable": {
     "message": "Couldn't load conversations. Close this list and try again."
+  },
+  "helperRequirements": {
+    "message": "Requires macOS, Python 3.9 or later, and a compatible Codex installation. This connector does not currently support Windows or Linux."
+  },
+  "helperDownload": {
+    "message": "Download the macOS connector"
+  },
+  "helperDownloadUnavailable": {
+    "message": "A connector download is not available yet. If you have the source files, follow the installation steps below."
+  },
+  "helperStorage": {
+    "message": "The connector is installed in ~/Library/Application Support/Tabgent. Your Codex login, configuration and conversation history remain in your Codex data directory."
+  },
+  "helperSourceInstall": {
+    "message": "Open Terminal in the Tabgent source folder and run:"
   }
 }

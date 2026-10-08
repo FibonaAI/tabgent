@@ -1,23 +1,34 @@
 #!/usr/bin/env python3
 """Register the local connector for this unpacked extension (macOS)."""
-import argparse, base64, hashlib, json, os, shlex, sys, shutil, tempfile
+import argparse, base64, hashlib, json, os, re, shlex, sys, shutil, tempfile
 from pathlib import Path
 
 parser = argparse.ArgumentParser(description=__doc__)
-parser.add_argument(
+mode = parser.add_mutually_exclusive_group()
+mode.add_argument(
     "--dev",
     action="store_true",
     help="Load the extension UI directly from this checkout",
 )
+mode.add_argument(
+    "--connector-only", action="store_true",
+    help="Install only the native connector; Chrome manages the store extension",
+)
+parser.add_argument("--extension-id", help="Chrome Web Store extension ID")
 args = parser.parse_args()
 if sys.platform != "darwin":
     raise SystemExit("This installer currently supports macOS.")
 root = Path(__file__).resolve().parents[1]
-manifest = json.loads((root / "manifest.json").read_text())
-key = base64.b64decode(manifest["key"])
-ext_id = "".join(
-    chr(ord("a") + int(c, 16)) for c in hashlib.sha256(key).hexdigest()[:32]
-)
+if args.extension_id:
+    if not re.fullmatch(r"[a-p]{32}", args.extension_id):
+        parser.error("Extension ID must contain 32 lowercase letters from a to p")
+    ext_id = args.extension_id
+else:
+    manifest = json.loads((root / "manifest.json").read_text())
+    key = base64.b64decode(manifest["key"])
+    ext_id = "".join(
+        chr(ord("a") + int(c, 16)) for c in hashlib.sha256(key).hexdigest()[:32]
+    )
 codex_home = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex")).resolve()
 home = Path.home() / "Library/Application Support/Tabgent"
 home.mkdir(parents=True, exist_ok=True)
@@ -60,6 +71,9 @@ for directory in [
         json.dumps(data, indent=2) + "\n"
     )
 print("Connector installed. Extension ID: " + ext_id)
+if args.connector_only:
+    print("Return to Tabgent in Chrome and choose Check again.")
+    raise SystemExit(0)
 installed = root if args.dev else home / "extension"
 if not args.dev:
     # Stage before replacement so removed runtime files do not survive upgrades.

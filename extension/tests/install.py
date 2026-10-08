@@ -7,6 +7,7 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import zipfile
 
 if sys.platform != "darwin":
     print("SKIP macOS installer")
@@ -58,4 +59,44 @@ with tempfile.TemporaryDirectory(prefix="tabgent-install-") as directory:
     assert config.read_text() == "# existing configuration\n"
     assert list(old_install.iterdir()) == [sentinel]
 
-print("PASS independent install path, host registrations, update, dev mode and Codex preservation")
+    output = user_home / "artifacts"
+    store_id = "abcdefghijklmnopabcdefghijklmnop"
+    subprocess.run(
+        [sys.executable, str(root.parent / "scripts/package-store.py"),
+         "--extension-id", store_id, "--connector-url", "https://example.com/download",
+         "--output", str(output)], check=True, capture_output=True,
+    )
+    with zipfile.ZipFile(output / "Tabgent-Chrome.zip") as archive:
+        names = archive.namelist()
+        assert len(names) == len(set(names))
+        assert "manifest.json" in names
+        assert "key" not in json.loads(archive.read("manifest.json"))
+        assert not any(n.startswith(("native/", "tests/", "scripts/")) for n in names)
+        assert json.loads(archive.read("release.json"))["connectorUrl"] == "https://example.com/download"
+    with zipfile.ZipFile(output / "Tabgent-Connector-macOS.zip") as archive:
+        archive.extractall(output)
+    package = output / "Tabgent Connector"
+    assert store_id in (package / "Install Connector.command").read_text()
+    assert not (package / "manifest.json").exists()
+    untouched = installed / "extension/keep.txt"
+    untouched.write_text("Chrome manages this directory")
+    subprocess.run(
+        ["zsh", str(package / "Install Connector.command")],
+        env=env, check=True, capture_output=True,
+    )
+    assert untouched.exists()
+    for registration in registrations:
+        assert json.loads(registration.read_text())["allowed_origins"] == [
+            f"chrome-extension://{store_id}/"
+        ]
+    invalid = subprocess.run(
+        [sys.executable, str(root / "native/install.py"),
+         "--connector-only", "--extension-id", "invalid"],
+        env=env, capture_output=True,
+    )
+    assert invalid.returncode != 0
+    assert json.loads(registrations[0].read_text())["allowed_origins"] == [
+        f"chrome-extension://{store_id}/"
+    ]
+
+print("PASS installer, store archives, connector-only install, ID validation and Codex preservation")

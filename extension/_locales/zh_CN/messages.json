@@ -1,0 +1,8 @@
+{
+  "extensionName": {
+    "message": "Tabgent"
+  },
+  "extensionDescription": {
+    "message": "在 Chrome 中使用 Codex，阅读网页、比较标签页、处理 PDF。需要 macOS、Codex 和本地连接器。"
+  }
+}
