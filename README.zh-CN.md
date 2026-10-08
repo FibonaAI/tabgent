@@ -16,74 +16,49 @@ Tabgent 是一个 Chrome 扩展，让你在浏览器侧边栏使用 Codex。它�
 
 点击动图可查看大图。
 
-### 1. 直接问当前网页
-
-不用复制网址或粘贴网页内容，打开侧边栏就能问。
-
-[![直接问当前网页](docs/assets/demos/02-current-tab.gif)](docs/assets/demos/02-current-tab.gif)
-
-### 2. 在 GitHub 找到代码、看懂实现
-
-想知道某个功能写在哪里？让 Tabgent 打开文件、定位代码行并解释。
-
-[![在 GitHub 找到代码、看懂实现](docs/assets/demos/03-github-code.gif)](docs/assets/demos/03-github-code.gif)
-
 <table>
   <tr>
-    <td width="50%" valign="top">
-      <strong>3. 读论文，直接标出解释依据</strong>
-      <p>解释《Attention Is All You Need》的 Figure 1，并高亮相关原文。</p>
-      <a href="docs/assets/demos/04-pdf-explain-highlight.gif"><img src="docs/assets/demos/04-pdf-explain-highlight.gif" alt="读论文，直接标出解释依据" width="480"></a>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/06-compare-pages.gif"><img src="docs/assets/demos/06-compare-pages.gif" alt="比较多个网页" width="180"></a><br>
+      <strong>比较多个网页</strong>
     </td>
-    <td width="50%" valign="top">
-      <strong>4. 把搜索条件交给助手填写</strong>
-      <p>查找原始 RAG 论文：填写标题关键词和年份，再执行搜索。</p>
-      <a href="docs/assets/demos/05-fill-search-form.gif"><img src="docs/assets/demos/05-fill-search-form.gif" alt="把搜索条件交给助手填写" width="480"></a>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/04-pdf-explain-highlight.gif"><img src="docs/assets/demos/04-pdf-explain-highlight.gif" alt="阅读标注 PDF" width="180"></a><br>
+      <strong>阅读标注 PDF</strong>
+    </td>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/03-github-code.gif"><img src="docs/assets/demos/03-github-code.gif" alt="导航讲解代码" width="180"></a><br>
+      <strong>导航讲解代码</strong>
+    </td>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/05-fill-search-form.gif"><img src="docs/assets/demos/05-fill-search-form.gif" alt="自动填写表单" width="180"></a><br>
+      <strong>自动填写表单</strong>
+    </td>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/08-selected-text.gif"><img src="docs/assets/demos/08-selected-text.gif" alt="选中文字追问" width="180"></a><br>
+      <strong>选中文字追问</strong>
     </td>
   </tr>
-</table>
-
-<table>
   <tr>
-    <td width="50%" valign="top">
-      <strong>5. 比较打开的网页再做决定</strong>
-      <p>带七岁孩子去哪家 V&A？比较门票、预约要求和活动。</p>
-      <a href="docs/assets/demos/06-compare-pages.gif"><img src="docs/assets/demos/06-compare-pages.gif" alt="比较打开的网页再做决定" width="480"></a>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/07-recipe-quantities.gif"><img src="docs/assets/demos/07-recipe-quantities.gif" alt="换算食谱份量" width="180"></a><br>
+      <strong>换算食谱份量</strong>
     </td>
-    <td width="50%" valign="top">
-      <strong>6. 选中看不懂的地方，直接追问</strong>
-      <p>文献同步了，PDF 却没有？选中说明，直接问原因。</p>
-      <a href="docs/assets/demos/08-selected-text.gif"><img src="docs/assets/demos/08-selected-text.gif" alt="选中看不懂的地方，直接追问" width="480"></a>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/02-current-tab.gif"><img src="docs/assets/demos/02-current-tab.gif" alt="问当前网页" width="180"></a><br>
+      <strong>问当前网页</strong>
     </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <strong>7. 切换标签页，接着聊各自的话题</strong>
-      <p>在食谱和帮助页面之间切换，各自的对话会跟着回来。</p>
-      <a href="docs/assets/demos/09-tab-conversations.gif"><img src="docs/assets/demos/09-tab-conversations.gif" alt="切换标签页，接着聊各自的话题" width="480"></a>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/09-tab-conversations.gif"><img src="docs/assets/demos/09-tab-conversations.gif" alt="切换标签会话" width="180"></a><br>
+      <strong>切换标签会话</strong>
     </td>
-    <td width="50%" valign="top">
-      <strong>8. 找回这个网页上问过的问题</strong>
-      <p>打开会话历史，找回之前问过的食材用量清单。</p>
-      <a href="docs/assets/demos/10-page-history.gif"><img src="docs/assets/demos/10-page-history.gif" alt="找回这个网页上问过的问题" width="480"></a>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/10-page-history.gif"><img src="docs/assets/demos/10-page-history.gif" alt="找回历史对话" width="180"></a><br>
+      <strong>找回历史对话</strong>
     </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <strong>9. 点一下，助手就在旁边</strong>
-      <p>点击工具栏图标即可打开，不用离开正在浏览的网站。</p>
-      <a href="docs/assets/demos/01-one-click.gif"><img src="docs/assets/demos/01-one-click.gif" alt="点一下，助手就在旁边" width="480"></a>
-    </td>
-    <td width="50%" valign="top">
-      <strong>10. 按要做的份量换算食谱</strong>
-      <p>食谱能做十二张薄饼，只想做六张？直接得到减半后的食材清单。</p>
-      <a href="docs/assets/demos/07-recipe-quantities.gif"><img src="docs/assets/demos/07-recipe-quantities.gif" alt="按要做的份量换算食谱" width="480"></a>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/01-one-click.gif"><img src="docs/assets/demos/01-one-click.gif" alt="一键启动" width="180"></a><br>
+      <strong>一键启动</strong>
     </td>
   </tr>
 </table>

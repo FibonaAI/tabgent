@@ -16,74 +16,49 @@ Tabgent is a Chrome extension that puts Codex in your browser sidebar. It can re
 
 Click any demo to view it full size.
 
-### 1. Ask about the page you’re on
-
-No copying URLs or pasting page content. Open the sidebar and ask.
-
-[![Ask about the page you’re on](docs/assets/demos/02-current-tab.gif)](docs/assets/demos/02-current-tab.gif)
-
-### 2. Find and understand code on GitHub
-
-Ask where something happens. Tabgent opens the file, finds the lines and explains them.
-
-[![Find and understand code on GitHub](docs/assets/demos/03-github-code.gif)](docs/assets/demos/03-github-code.gif)
-
 <table>
   <tr>
-    <td width="50%" valign="top">
-      <strong>3. Read a paper with the evidence beside you</strong>
-      <p>Explain Figure 1 in Attention Is All You Need and highlight the passage behind it.</p>
-      <a href="docs/assets/demos/04-pdf-explain-highlight.gif"><img src="docs/assets/demos/04-pdf-explain-highlight.gif" alt="Read a paper with the evidence beside you" width="480"></a>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/06-compare-pages.gif"><img src="docs/assets/demos/06-compare-pages.gif" alt="Compare pages" width="180"></a><br>
+      <strong>Compare pages</strong>
     </td>
-    <td width="50%" valign="top">
-      <strong>4. Let Tabgent fill the search form</strong>
-      <p>Find the original RAG paper: enter its title keywords and year, then run the search.</p>
-      <a href="docs/assets/demos/05-fill-search-form.gif"><img src="docs/assets/demos/05-fill-search-form.gif" alt="Let Tabgent fill the search form" width="480"></a>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/04-pdf-explain-highlight.gif"><img src="docs/assets/demos/04-pdf-explain-highlight.gif" alt="Read &amp; highlight PDFs" width="180"></a><br>
+      <strong>Read &amp; highlight PDFs</strong>
+    </td>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/03-github-code.gif"><img src="docs/assets/demos/03-github-code.gif" alt="Explore code" width="180"></a><br>
+      <strong>Explore code</strong>
+    </td>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/05-fill-search-form.gif"><img src="docs/assets/demos/05-fill-search-form.gif" alt="Fill forms" width="180"></a><br>
+      <strong>Fill forms</strong>
+    </td>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/08-selected-text.gif"><img src="docs/assets/demos/08-selected-text.gif" alt="Ask about a selection" width="180"></a><br>
+      <strong>Ask about a selection</strong>
     </td>
   </tr>
-</table>
-
-<table>
   <tr>
-    <td width="50%" valign="top">
-      <strong>5. Compare open tabs before deciding</strong>
-      <p>Which V&A museum suits a seven-year-old? Compare admission, booking and activities.</p>
-      <a href="docs/assets/demos/06-compare-pages.gif"><img src="docs/assets/demos/06-compare-pages.gif" alt="Compare open tabs before deciding" width="480"></a>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/07-recipe-quantities.gif"><img src="docs/assets/demos/07-recipe-quantities.gif" alt="Adjust a recipe" width="180"></a><br>
+      <strong>Adjust a recipe</strong>
     </td>
-    <td width="50%" valign="top">
-      <strong>6. Ask about the part you selected</strong>
-      <p>References synced, but PDFs didn’t? Select the documentation and ask why.</p>
-      <a href="docs/assets/demos/08-selected-text.gif"><img src="docs/assets/demos/08-selected-text.gif" alt="Ask about the part you selected" width="480"></a>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/02-current-tab.gif"><img src="docs/assets/demos/02-current-tab.gif" alt="Ask this page" width="180"></a><br>
+      <strong>Ask this page</strong>
     </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <strong>7. Switch tabs without losing your place</strong>
-      <p>Move between a recipe and a help page. Each tab brings back its conversation.</p>
-      <a href="docs/assets/demos/09-tab-conversations.gif"><img src="docs/assets/demos/09-tab-conversations.gif" alt="Switch tabs without losing your place" width="480"></a>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/09-tab-conversations.gif"><img src="docs/assets/demos/09-tab-conversations.gif" alt="Switch tab chats" width="180"></a><br>
+      <strong>Switch tab chats</strong>
     </td>
-    <td width="50%" valign="top">
-      <strong>8. Find an earlier answer on the same page</strong>
-      <p>Open Page chats and return to the ingredient checklist you asked for earlier.</p>
-      <a href="docs/assets/demos/10-page-history.gif"><img src="docs/assets/demos/10-page-history.gif" alt="Find an earlier answer on the same page" width="480"></a>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/10-page-history.gif"><img src="docs/assets/demos/10-page-history.gif" alt="Revisit past chats" width="180"></a><br>
+      <strong>Revisit past chats</strong>
     </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <strong>9. Open your agent in one click</strong>
-      <p>Start from the toolbar without leaving the website.</p>
-      <a href="docs/assets/demos/01-one-click.gif"><img src="docs/assets/demos/01-one-click.gif" alt="Open your agent in one click" width="480"></a>
-    </td>
-    <td width="50%" valign="top">
-      <strong>10. Make a recipe work for your table</strong>
-      <p>A recipe makes twelve pancakes; you only need six. Get the adjusted ingredient list.</p>
-      <a href="docs/assets/demos/07-recipe-quantities.gif"><img src="docs/assets/demos/07-recipe-quantities.gif" alt="Make a recipe work for your table" width="480"></a>
+    <td width="20%" align="center" valign="top">
+      <a href="docs/assets/demos/01-one-click.gif"><img src="docs/assets/demos/01-one-click.gif" alt="Launch in one click" width="180"></a><br>
+      <strong>Launch in one click</strong>
     </td>
   </tr>
 </table>
