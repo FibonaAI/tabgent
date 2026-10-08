@@ -764,12 +764,35 @@ function checkInstallation() {
   setupStatus('setupChecking');
   bridge.send('codexConnect');
 }
+// Setup timings contain no conversation content or identifiers.
+async function setupRpc(method, params) {
+  const started = performance.now();
+  try {
+    return await rpc(method, params);
+  } finally {
+    console.debug(`[Tabgent setup] ${method}: ${Math.round(performance.now() - started)} ms`);
+  }
+}
+async function loadModels() {
+  const catalog = await setupRpc('model/list', {});
+  models = catalog.data.filter((m) => !m.hidden);
+  $('model').replaceChildren();
+  for (const m of models) {
+    const o = node('option', m.displayName, $('model'));
+    o.value = m.model;
+  }
+  const preferredModel = bridge.settings?.model || localStorage.getItem('codex:model');
+  const defaultModel =
+    models.find((m) => m.model === preferredModel) || models.find((m) => m.isDefault) || models[0];
+  if (defaultModel) $('model').value = defaultModel.model;
+  efforts();
+}
 let initializing = false;
 async function initialize() {
   if (initialized || initializing) return;
   initializing = true;
   try {
-    await rpc('initialize', {
+    await setupRpc('initialize', {
       clientInfo: {
         name: 'tabgent_browser',
         title: 'Tabgent',
@@ -795,37 +818,27 @@ async function completeSetup() {
   if (!initialized || ready || completingSetup) return;
   completingSetup = true;
   try {
-    const account = await rpc('account/read');
+    const account = await setupRpc('account/read');
     if (!account.account && account.requiresOpenaiAuth !== false) {
       showSetup(loginAttempt ? 'waiting' : 'signin');
       return;
     }
     if (setupMode) setupStatus('setupConnecting');
-    const catalog = await rpc('model/list', {});
-    models = catalog.data.filter((m) => !m.hidden);
-    $('model').replaceChildren();
-    for (const m of models) {
-      const o = node('option', m.displayName, $('model'));
-      o.value = m.model;
-    }
-    const preferredModel = bridge.settings?.model || localStorage.getItem('codex:model');
-    const defaultModel =
-      models.find((m) => m.model === preferredModel) ||
-      models.find((m) => m.isDefault) ||
-      models[0];
-    if (defaultModel) $('model').value = defaultModel.model;
-    efforts();
+    const modelsReady = loadModels();
+    // Observe early rejection while resume is pending; awaiting below still reports it.
+    modelsReady.catch(() => {});
     let response;
     if (threadId) {
       try {
-        response = await rpc('thread/resume', { threadId, excludeTurns: false });
+        response = await setupRpc('thread/resume', { threadId, excludeTurns: false });
       } catch (e) {
         // App-server persists a new thread only after its first turn.
         if (!e.message.includes('no rollout found for thread id')) throw e;
       }
     }
     if (!response) {
-      response = await rpc('thread/start', {
+      await modelsReady;
+      response = await setupRpc('thread/start', {
         model: $('model').value || undefined,
         developerInstructions: instructions,
         dynamicTools: [tool],
@@ -843,10 +856,7 @@ async function completeSetup() {
           thread.preview?.slice(0, 48)) ||
         i18n('newChat'),
     );
-    if (!bridge.settings?.model && thread.model && models.some((m) => m.model === thread.model)) {
-      $('model').value = thread.model;
-      efforts();
-    }
+    const renderStarted = performance.now();
     for (const turn of thread.turns || []) {
       worklog = null;
       for (const item of turn.items || [])
@@ -879,6 +889,15 @@ async function completeSetup() {
       setBusy(true);
     } else {
       followups.pause(thread.turns?.at(-1)?.status === 'interrupted');
+    }
+    scrollEnd();
+    console.debug(
+      `[Tabgent setup] history render: ${Math.round(performance.now() - renderStarted)} ms`,
+    );
+    await modelsReady;
+    if (!bridge.settings?.model && thread.model && models.some((m) => m.model === thread.model)) {
+      $('model').value = thread.model;
+      efforts();
     }
     await composerSettings.applySaved();
     ready = true;

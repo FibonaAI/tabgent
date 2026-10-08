@@ -8,11 +8,11 @@ const root = path.resolve(__dirname, '..');
 const bridge = `
 const listeners=new Map();
 const mode=new URL(location.href).searchParams.get('mode');
-if(!sessionStorage.started){sessionStorage.started='1';sessionStorage.installed=String(mode!=='install');sessionStorage.helper=String(mode!=='helper');sessionStorage.auth=String(['selection','transcript'].includes(mode));sessionStorage.draft='keep my draft';}
+if(!sessionStorage.started){sessionStorage.started='1';sessionStorage.installed=String(mode!=='install');sessionStorage.helper=String(mode!=='helper');sessionStorage.auth=String(['selection','transcript'].includes(mode)||mode.startsWith('setup-'));sessionStorage.draft='keep my draft';}
 let queueEntries=[];
 let authenticated=sessionStorage.auth==='true';
 const emit=(method,params={})=>listeners.get('codex-message')?.({method,params});
-export const bridge={threadId:null,send(name,args=[]){
+export const bridge={threadId:mode.startsWith('setup-')&&mode!=='setup-new'?'test-thread':null,send(name,args=[]){
  if(name==='codexConnect'&&mode==='native-failure'){setTimeout(()=>emit('bridge/error',{messageKey:'helperLaunchFailed'}),0);return;}
  if(name==='codexConnect')setTimeout(()=>emit(sessionStorage.helper!=='true'?'bridge/helperMissing':sessionStorage.installed!=='true'?'bridge/error':'bridge/ready',sessionStorage.installed!=='true'?{messageKey:'bridgeInstall'}:{}),0);
  if(name==='codexCheckAuth'&&sessionStorage.auth==='true'&&!authenticated)emit('bridge/authChanged');
@@ -39,6 +39,10 @@ export const bridge={threadId:null,send(name,args=[]){
  if(m.method==='model/list')result={data:[{model:'test-model',displayName:'Test model',isDefault:true,supportedReasoningEfforts:[{reasoningEffort:'low'},{reasoningEffort:'medium'},{reasoningEffort:'high'}]}]};
  if(m.method==='bridge/attachment/save')result={path:'/uploads/'+m.params.name};
  if(m.method==='thread/start'||m.method==='thread/resume')result={thread:{id:'test-thread',turns:[]}};
+ if(m.method==='thread/resume'&&mode==='setup-missing'){setTimeout(()=>listeners.get('codex-message')?.({id:m.id,error:{message:'no rollout found for thread id'}}),0);return;}
+ if(m.method==='thread/resume'&&mode.startsWith('setup-'))result={thread:{id:'test-thread',model:'test-model',turns:[{id:'saved-turn',status:'completed',items:[{id:'saved-user',type:'userMessage',content:[{type:'text',text:'Saved question'}]},{id:'saved-answer',type:'agentMessage',text:'Saved answer',phase:'final_answer'}]}]}};
+ if(m.method==='model/list'&&mode.startsWith('setup-')){window.setupTest.releaseModels=()=>listeners.get('codex-message')?.({id:m.id,...(mode==='setup-model-failure'?{error:{message:'Model list failed'}}:{result})});return;}
+
  setTimeout(()=>{
  listeners.get('codex-message')?.({id:m.id,result});
  if(m.method.startsWith('thread/queue/')&&m.method!=='thread/queue/list')emit('thread/queue/changed',{threadId:'test-thread'});
@@ -99,6 +103,10 @@ export function saveScopePreference(){}
   const messages = JSON.parse(fs.readFileSync(root + '/_locales/en/messages.json'));
   try {
     for (const mode of [
+      'setup-resume',
+      'setup-model-failure',
+      'setup-new',
+      'setup-missing',
       'transcript',
       'attach-failure',
       'selection',
@@ -130,6 +138,50 @@ export function saveScopePreference(){}
       const errors = [];
       page.on('pageerror', (e) => errors.push(e.message));
       await page.goto('http://127.0.0.1:' + server.address().port + '/ui/chat.html?mode=' + mode);
+      if (mode.startsWith('setup-')) {
+        await page.waitForFunction(() => typeof setupTest.releaseModels === 'function');
+        if (mode === 'setup-resume' || mode === 'setup-model-failure') {
+          await page.getByText('Saved answer', { exact: true }).waitFor();
+          assert.equal(await page.locator('.message.user').innerText(), 'Saved question');
+          assert(await page.locator('#send').isDisabled(), 'Settings must be ready before sending');
+          assert.notEqual(await page.locator('#connection').getAttribute('data-state'), 'ready');
+        } else {
+          if (mode === 'setup-missing')
+            await page.waitForFunction(() =>
+              setupTest.requests.some((r) => r.method === 'thread/resume'),
+            );
+          assert.equal(
+            await page.evaluate(() => setupTest.requests.some((r) => r.method === 'thread/start')),
+            false,
+            'New threads wait for model choice',
+          );
+        }
+        await page.evaluate(() => setupTest.releaseModels());
+        await page.waitForFunction(
+          (failed) =>
+            document.querySelector('#connection').dataset.state === (failed ? 'failed' : 'ready'),
+          mode === 'setup-model-failure',
+        );
+        if (mode === 'setup-model-failure') {
+          assert(await page.locator('#send').isDisabled());
+          assert(await page.locator('#reconnect').isVisible());
+          assert.equal(await page.getByText('Saved answer', { exact: true }).count(), 1);
+        } else if (mode === 'setup-new' || mode === 'setup-missing') {
+          assert.equal(
+            await page.evaluate(
+              () => setupTest.requests.find((r) => r.method === 'thread/start').params.model,
+            ),
+            'test-model',
+          );
+        } else {
+          assert.equal(await page.getByText('Saved answer', { exact: true }).count(), 1);
+          assert.equal(await page.locator('#model').inputValue(), 'test-model');
+        }
+        assert.deepEqual(errors, []);
+        console.log('PASS ' + mode + ' → history and model setup load independently');
+        await context.close();
+        continue;
+      }
       if (mode === 'transcript') {
         await page.waitForFunction(
           () => document.querySelector('#connection').dataset.state === 'ready',
@@ -236,7 +288,9 @@ export function saveScopePreference(){}
         await page.setViewportSize({ width: 390, height: 720 });
         await assertAnchored('#permissionMenu', '#permissionButton');
         await page.setViewportSize({ width: 1280, height: 720 });
-        await page.locator('#permissionMenu').screenshot({ path: '/tmp/tabgent-permission-menu.png' });
+        await page
+          .locator('#permissionMenu')
+          .screenshot({ path: '/tmp/tabgent-permission-menu.png' });
         await page.locator('[data-mode="auto"]').click();
         await page.waitForFunction(
           () => document.querySelector('#permissionLabel').textContent === 'Approve for me',
@@ -303,7 +357,9 @@ export function saveScopePreference(){}
         assert(await page.locator('#historyUrlDetails').isHidden());
         assert(!(await page.locator('.history-entry small').first().innerText()).includes('PM'));
         assert.equal(await page.locator('.history-date').innerText(), 'Earlier');
-        await page.locator('#historyPanel').screenshot({ path: '/tmp/tabgent-history-refined.png' });
+        await page
+          .locator('#historyPanel')
+          .screenshot({ path: '/tmp/tabgent-history-refined.png' });
         await page.locator('.history-entry').last().click();
         assert.equal(
           (await page.evaluate(() => setupTest.actions.at(-1))).threadId,
