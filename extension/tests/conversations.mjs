@@ -205,7 +205,17 @@ assert.deepEqual(
 );
 console.log('PASS new tabs inherit recent composer settings; copies preserve source settings');
 
+const quote = {
+  id: 'quote1',
+  text: 'Selected text',
+  threadId: 'source-thread',
+  title: 'Source chat',
+  messageId: 'answer',
+  startOffset: 2,
+  endOffset: 15,
+};
 const fresh = await newChatAndOpen({
+  annotations: [quote],
   type: 'newConversation',
   conversationKey: 1,
   windowId: 1,
@@ -216,6 +226,10 @@ const freshView = await attach(fresh.tabId, fresh.tabId);
 const freshState = freshView.messages[0].state;
 assert.equal(freshState.threadId, undefined);
 assert.equal(freshState.draft, '');
+assert.deepEqual(freshState.annotations, [quote]);
+await freshView.send({ type: 'ui', name: 'codexSetAnnotations', args: [[]] });
+const reopenedQuoteView = await attach(fresh.tabId, fresh.tabId);
+assert.deepEqual(reopenedQuoteView.messages[0].state.annotations, []);
 assert.deepEqual(freshState.attachments, []);
 assert.equal(freshState.scope, 'browser');
 assert.deepEqual(freshState.settings, copiedSettings);
@@ -674,6 +688,7 @@ await newConversation(copiedSettings);
 assert.equal(openedWindow, undefined);
 assert.deepEqual(uiCalls.at(-1), {
   type: 'newConversation',
+  annotations: [],
   companionTabId: undefined,
   windowId: 2,
   conversationKey: 10,

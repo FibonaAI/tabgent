@@ -1,3 +1,4 @@
+import { cleanAnnotations } from './ui/annotations.js';
 import { createUrlHistory } from './url-history.js';
 import { startPdfRouting, pdfSource, isCurrentPdfSender } from './pdf-routing.js';
 import { tool, instructions, pageContextPrefix } from './session-config.js';
@@ -474,6 +475,7 @@ chrome.runtime.onConnect.addListener((port) => {
             conversationKey: s.key,
             windowId: (await chrome.tabs.get(viewTabId)).windowId,
             selection: s.selection?.tabId === port.companionTabId ? s.selection : null,
+            annotations: s.annotations || [],
             attachments: s.attachments || [],
             questions: s.questions || [],
           },
@@ -587,6 +589,11 @@ chrome.runtime.onConnect.addListener((port) => {
           for (const p of s.ports) if (p !== port) event(p, 'codex-attachments', attachments);
           await persist();
         }
+      }
+      if (msg.name === 'codexSetAnnotations') {
+        s.annotations = cleanAnnotations(arg);
+        for (const p of s.ports) if (p !== port) event(p, 'codex-annotations', s.annotations);
+        await persist();
       }
       if (msg.name === 'codexClearSelection' && s.selection?.id === arg) {
         s.selection = null;
@@ -881,6 +888,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
             : 'ask',
         },
         draft: '',
+        annotations: cleanAnnotations(msg.annotations),
         ports: new Set(),
       };
       await recordHistory(source);

@@ -177,6 +177,7 @@
             ×
           </button>
         </div>
+        <div id="annotations" hidden></div>
         <div id="attachments" hidden></div>
         <div id="skillChips" hidden></div>
         <div id="planMode" hidden>$i18n{planMode}</div>
@@ -295,6 +296,10 @@
       </div>
     </footer>
     <dialog id="commandDialog" aria-label="$i18n{commands}"></dialog>
+    <div id="annotationToolbar" popover role="toolbar" aria-label="$i18n{quoteActions}">
+      <button id="annotationAdd" type="button">$i18n{addToChat}</button>
+      <button id="annotationNew" type="button">$i18n{askInNewChat}</button>
+    </div>
     <div id="historyUrlDetails" popover></div>
     <div id="contextDetails" popover>
       <div id="contextFullTitle"></div>

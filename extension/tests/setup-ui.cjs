@@ -8,11 +8,12 @@ const root = path.resolve(__dirname, '..');
 const bridge = `
 const listeners=new Map();
 const mode=new URL(location.href).searchParams.get('mode');
-if(!sessionStorage.started){sessionStorage.started='1';sessionStorage.installed=String(mode!=='install');sessionStorage.helper=String(mode!=='helper');sessionStorage.auth=String(['selection','transcript','tool-burst'].includes(mode)||mode.startsWith('setup-'));sessionStorage.draft='keep my draft';}
+if(!sessionStorage.started){sessionStorage.started='1';sessionStorage.installed=String(mode!=='install');sessionStorage.helper=String(mode!=='helper');sessionStorage.auth=String(['selection','transcript','tool-burst','annotations'].includes(mode)||mode.startsWith('setup-'));sessionStorage.draft='keep my draft';}
 let queueEntries=[];
 let authenticated=sessionStorage.auth==='true';
 const emit=(method,params={})=>listeners.get('codex-message')?.({method,params});
 export const bridge={threadId:mode.startsWith('setup-')&&mode!=='setup-new'?'test-thread':null,send(name,args=[]){
+ if(name==='codexSetAnnotations')sessionStorage.annotations=JSON.stringify(args[0]);
  if(name==='codexConnect'&&mode==='native-failure'){setTimeout(()=>emit('bridge/error',{messageKey:'helperLaunchFailed'}),0);return;}
  if(name==='codexConnect')setTimeout(()=>emit(sessionStorage.helper!=='true'?'bridge/helperMissing':sessionStorage.installed!=='true'?'bridge/error':'bridge/ready',sessionStorage.installed!=='true'?{messageKey:'bridgeInstall'}:{}),0);
  if(name==='codexCheckAuth'&&sessionStorage.auth==='true'&&!authenticated)emit('bridge/authChanged');
@@ -57,10 +58,10 @@ export async function pageHistory(threadId){
  if(threadId){window.setupTest.actions.push({name:'switchHistory',threadId});throw Error('Fixture switch');}
  return {url:'https://example.test/paper.pdf',current:'test-thread',entries:[{threadId:'test-thread',title:'Current conversation',updatedAt:1700000000000},{threadId:'older-thread',title:'Earlier research',updatedAt:1690000000000}]};
 }
-export async function newConversation(){}
+export async function newConversation(settings,annotations){window.setupTest.actions.push({name:'newConversation',settings,annotations});if(window.setupTest.failNew)throw Error('Test new chat failure');}
 export async function openAgentTab(){window.setupTest.actions.push({name:'openAgent'})}
 export async function startBridge(){if(mode==='attach-failure')throw Error('Missing tab');}
-export function addWebUiListener(name,fn){listeners.set(name,fn)}
+export function addWebUiListener(name,fn){listeners.set(name,fn);if(name==='codex-annotations')fn(JSON.parse(sessionStorage.annotations||'[]'));}
 export function bindThread(id){bridge.threadId=id}
 export function saveViewDraft(text){sessionStorage.draft=text}
 export function readViewDraft(){return sessionStorage.draft||''}
@@ -108,6 +109,7 @@ export function saveScopePreference(){}
       'setup-model-failure',
       'setup-new',
       'setup-missing',
+      'annotations',
       'tool-burst',
       'transcript',
       'attach-failure',
@@ -140,6 +142,131 @@ export function saveScopePreference(){}
       const errors = [];
       page.on('pageerror', (e) => errors.push(e.message));
       await page.goto('http://127.0.0.1:' + server.address().port + '/ui/chat.html?mode=' + mode);
+      if (mode === 'annotations') {
+        await page.waitForFunction(
+          () => document.querySelector('#connection').dataset.state === 'ready',
+        );
+        const addAnswer = async () =>
+          page.evaluate(
+            (text) =>
+              setupTest.emit('item/completed', {
+                item: { id: 'quoted-answer', type: 'agentMessage', text, phase: 'final_answer' },
+              }),
+            'First passage. Second passage.',
+          );
+        const select = async (start, end) => {
+          await page.locator('[data-message-id="quoted-answer"]').scrollIntoViewIfNeeded();
+          await page.evaluate(
+            ({ start, end }) => {
+              const text = document.querySelector(
+                '[data-message-id="quoted-answer"] .message-body p',
+              ).firstChild;
+              const range = document.createRange();
+              range.setStart(text, start);
+              range.setEnd(text, end);
+              getSelection().removeAllRanges();
+              getSelection().addRange(range);
+              text.parentElement.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+            },
+            { start, end },
+          );
+          assert(await page.locator('#annotationToolbar').isVisible());
+        };
+        await addAnswer();
+        await select(0, 13);
+        await page.locator('#annotationAdd').click();
+        await select(15, 29);
+        await page.setViewportSize({ width: 420, height: 740 });
+        await select(15, 29);
+        const toolbarBounds = await page.locator('#annotationToolbar').boundingBox();
+        assert(toolbarBounds.x >= 0 && toolbarBounds.x + toolbarBounds.width <= 420);
+        await page.screenshot({ path: '/tmp/tabgent-annotation-toolbar.png' });
+        await page.locator('#annotationAdd').click();
+        await page.screenshot({ path: '/tmp/tabgent-annotation-composer.png' });
+        await page.setViewportSize({ width: 1280, height: 720 });
+        assert.equal(await page.locator('.annotation-card').count(), 2);
+        await page.reload();
+        await page.waitForFunction(
+          () => document.querySelector('#connection').dataset.state === 'ready',
+        );
+        assert.equal(
+          await page.locator('.annotation-card').count(),
+          2,
+          'draft quotes survive reload',
+        );
+        await page.locator('.annotation-card > button').first().click();
+        assert.equal(await page.locator('.annotation-card').count(), 1);
+        await addAnswer();
+        await select(0, 13);
+        await page.locator('#annotationNew').click();
+        const created = await page.evaluate(() =>
+          setupTest.actions.find((a) => a.name === 'newConversation'),
+        );
+        assert.equal(created.annotations[0].text, 'First passage');
+        assert.equal(created.annotations[0].threadId, 'test-thread');
+        assert.equal(created.annotations[0].messageId, 'quoted-answer');
+        assert.equal(created.annotations[0].startOffset, 0);
+        assert.equal(
+          await page.locator('.annotation-card').count(),
+          1,
+          'source draft stays intact',
+        );
+        await select(0, 13);
+        await page.keyboard.press('Escape');
+        assert(!(await page.locator('#annotationToolbar').isVisible()));
+        await select(0, 13);
+        await page.locator('#title').click();
+        assert(!(await page.locator('#annotationToolbar').isVisible()));
+        await page.locator('#prompt').fill('Explain this');
+        await page.evaluate(() => (setupTest.failSend = true));
+        await page.locator('#send').click();
+        await page.waitForFunction(
+          () => document.querySelector('#prompt').value === 'Explain this',
+        );
+        assert.equal(await page.locator('.annotation-card').count(), 1, 'failed send keeps quote');
+        await page.evaluate(() => (setupTest.failSend = false));
+        await page.locator('#send').click();
+        await page.waitForFunction(() => !document.querySelector('#annotations').children.length);
+        const input = await page.evaluate(() => setupTest.input);
+        assert(
+          input.some((p) => p.text?.includes('Second passage') && p.text.includes('quoted-answer')),
+        );
+        assert(
+          await page
+            .locator('.conversation-quote')
+            .last()
+            .innerText()
+            .then((t) => t.includes('Second passage')),
+        );
+        assert(
+          !(await page.locator('.message.user').last().innerText()).includes(
+            'Conversation annotations (',
+          ),
+        );
+        await page.screenshot({ path: '/tmp/tabgent-annotations.png' });
+        // App-server history may concatenate metadata with the user's prompt.
+        await page.evaluate(
+          (input) =>
+            setupTest.emit('item/completed', {
+              item: {
+                id: 'quote-history',
+                type: 'userMessage',
+                content: [{ type: 'text', text: input.map((p) => p.text).join('') }],
+              },
+            }),
+          input,
+        );
+        assert.equal(
+          await page.locator('[data-message-id="quote-history"] .conversation-quote').count(),
+          1,
+        );
+        assert.deepEqual(errors, []);
+        console.log(
+          'PASS selection toolbar, multiple/removable/persisted quotes, new-chat source, send failure and history',
+        );
+        await context.close();
+        continue;
+      }
       if (mode === 'tool-burst') {
         await page.waitForFunction(() => !document.querySelector('#prompt').disabled);
         await page.evaluate(() => {

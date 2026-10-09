@@ -1,3 +1,4 @@
+import { createAnnotations, annotationPrefix, readAnnotations } from './annotations.js';
 import { normalizeUserInput } from './user-input.js';
 import { createComposerSettings } from './composer-settings.js';
 import { createRelations, isLineageNote } from './relations.js';
@@ -78,12 +79,31 @@ let renderFrame = 0;
 function saveDraft() {
   saveViewDraft($('prompt').value);
 }
+const annotations = createAnnotations({
+  i18n,
+  thread: () => threadId,
+  title: () => $('title').value,
+  changed(value) {
+    bridge.send('codexSetAnnotations', [value]);
+    resizePrompt();
+  },
+  newChat: (quotes) =>
+    newConversation(
+      { ...bridge.settings, model: $('model').value, effort: $('effort').value },
+      quotes,
+    ),
+  showError,
+});
+addWebUiListener('codex-annotations', (value) => {
+  annotations.set(value, false);
+  resizePrompt();
+});
 function resizePrompt() {
   const prompt = $('prompt');
   prompt.style.height = '0px';
   prompt.style.height = (prompt.value ? Math.min(prompt.scrollHeight, 220) : 56) + 'px';
   $('attach').disabled = !ready;
-  const hasDraft = !!prompt.value.trim() || !!attachments.length;
+  const hasDraft = !!prompt.value.trim() || !!attachments.length || !!annotations.get().length;
   $('send').hidden = busy && !hasDraft;
   $('send').disabled =
     !ready || sending || stopping || attaching > 0 || !hasDraft || (busy && !turnId);
@@ -669,6 +689,7 @@ function renderItem(item, completed = true, timestamp = Date.now()) {
     document.body.classList.remove('empty');
     if (follow) requestAnimationFrame(scrollEnd);
   }
+  record.el.dataset.messageId = item.id;
   record.completed = completed;
   record.item = { ...record.item, ...item };
   if (completed) runningItems.delete(item.id);
@@ -1000,14 +1021,21 @@ async function send(queue = busy && queueing) {
       return;
     }
   }
-  if ((!text && !attachments.length) || attaching || !ready) return;
+  if ((!text && !attachments.length && !annotations.get().length) || attaching || !ready) return;
   const steering = busy && !queue;
   const expectedTurnId = turnId;
   if (steering && !turnId) return;
   const selection = selectedPageText;
+  const submittedAnnotations = annotations.get();
   const submittedAttachments = [...attachments];
   const input = text ? [{ type: 'text', text, text_elements: [] }] : [];
   const retained = [...restoredInput];
+  if (submittedAnnotations.length)
+    input.unshift({
+      type: 'text',
+      text: annotationPrefix + JSON.stringify({ annotations: submittedAnnotations }),
+      text_elements: [],
+    });
   input.push(...commands.input());
   for (const part of retained)
     if (!input.some((existing) => JSON.stringify(existing) === JSON.stringify(part)))
@@ -1057,13 +1085,16 @@ async function send(queue = busy && queueing) {
   requestAnimationFrame(scrollEnd);
   try {
     if ($('title').value === i18n('newChat')) {
-      const name = (text || submittedAttachments[0]?.name || '').replace(/\s+/g, ' ').slice(0, 48);
+      const name = (text || submittedAnnotations[0]?.text || submittedAttachments[0]?.name || '')
+        .replace(/\s+/g, ' ')
+        .slice(0, 48);
       title(name);
       rpc('thread/name/set', { threadId, name }).catch(() => {});
     }
     await (queue ? followups.add(input, selection) : deliverInput(submitted, steering));
     const delivery = submitted.el.querySelector('.delivery-status');
     if (delivery && !submitted.undelivered) delivery.textContent = i18n('pendingMessage');
+    annotations.remove(submittedAnnotations);
     commands.sent();
     restoredInput = restoredInput.filter((part) => !retained.includes(part));
     attachments = attachments.filter((a) => !submittedAttachments.includes(a));
@@ -1156,10 +1187,13 @@ const followups = createFollowups({
     const extras = [],
       files = [];
     let selection = null;
+    const quotes = [];
     const text = [];
     for (const part of normalizeUserInput(entry.input)) {
       if (part.type === 'text' && part.text.startsWith(pageContextPrefix)) continue;
-      if (part.type === 'text' && part.text.startsWith(selectionContextPrefix)) {
+      if (readAnnotations(part).length) {
+        quotes.push(...readAnnotations(part));
+      } else if (part.type === 'text' && part.text.startsWith(selectionContextPrefix)) {
         selection = JSON.parse(part.text.slice(selectionContextPrefix.length));
       } else if (part.type === 'localImage' || part.type === 'mention') {
         files.push({
@@ -1181,6 +1215,7 @@ const followups = createFollowups({
     }
     return () => {
       $('prompt').value = [...text, $('prompt').value].filter(Boolean).join('\n\n');
+      annotations.set([...annotations.get(), ...quotes]);
       attachments.push(...files);
       if (selection) selectedPageText = selection;
       restoredInput.push(...extras.filter((part) => part.type !== 'text' || !selection));
@@ -1751,6 +1786,21 @@ setInterval(refreshVisibleContext, 2000);
 function renderUserInput(el, input) {
   input = normalizeUserInput(input);
   el.replaceChildren();
+  for (const c of input)
+    for (const annotation of readAnnotations(c)) {
+      const quote = node('blockquote', null, el);
+      quote.className = 'page-quote conversation-quote';
+      const source = node('button', i18n('quotedFrom') + ' ' + annotation.title, quote);
+      source.type = 'button';
+      source.onclick = () => {
+        if (annotation.threadId === threadId)
+          items
+            .get(annotation.messageId)
+            ?.el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        else openRelatedThread(annotation.threadId).catch((error) => showError(error.message));
+      };
+      node('div', annotation.text, quote);
+    }
   const quotes = input.filter(
     (c) => c.type === 'text' && c.text.startsWith(i18n('selectionQuote') + '\n'),
   );

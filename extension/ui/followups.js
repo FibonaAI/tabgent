@@ -125,6 +125,7 @@ export function createFollowups({
         .filter(
           (p) =>
             p.type === 'text' &&
+            !p.browserContext &&
             !p.text.startsWith(selectionContextPrefix) &&
             !p.text.startsWith(pageContextPrefix) &&
             !p.text.startsWith(i18n('selectionQuote') + '\n'),

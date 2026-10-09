@@ -40,6 +40,10 @@ export async function startBridge() {
       const listener = listeners.get(selection.name);
       if (listener) listener(selection.value);
       else pending.push(selection);
+      const annotations = { name: 'codex-annotations', value: state.annotations || [] };
+      const annotationListener = listeners.get(annotations.name);
+      if (annotationListener) annotationListener(annotations.value);
+      else pending.push(annotations);
       const attachments = { name: 'codex-attachments', value: state.attachments || [] };
       const attachmentListener = listeners.get(attachments.name);
       if (attachmentListener) attachmentListener(attachments.value);
@@ -118,9 +122,10 @@ export async function openConversationLink(url, active, newTab = true) {
   return result;
 }
 
-export async function newConversation(settings) {
+export async function newConversation(settings, annotations = []) {
   const result = await chrome.runtime.sendMessage({
     type: 'newConversation',
+    annotations,
     conversationKey: state.conversationKey,
     companionTabId: state.companionTabId,
     settings,

@@ -28,5 +28,20 @@
   },
   "imageUnavailable": {
     "message": "图片暂时无法加载，请让助手重新生成。"
+  },
+  "quoteActions": {
+    "message": "引用操作"
+  },
+  "addToChat": {
+    "message": "添加到对话"
+  },
+  "askInNewChat": {
+    "message": "在新会话中提问"
+  },
+  "removeAnnotation": {
+    "message": "删除引用"
+  },
+  "quotedFrom": {
+    "message": "引用自"
   }
 }

@@ -1802,3 +1802,61 @@ body.history-open {
   position-anchor: --composer-scope;
   --menu-width: 340px;
 }
+
+#annotationToolbar {
+  position: fixed;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 4px 20px #0002;
+  max-width: calc(100vw - 16px);
+}
+#annotationToolbar button {
+  padding: 7px 10px;
+  border-radius: 6px;
+}
+#annotations {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow: auto;
+  padding: 8px 12px 0;
+}
+.annotation-card {
+  display: flex;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.annotation-card details {
+  flex: 1;
+  min-width: 0;
+}
+.annotation-card summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.annotation-card small {
+  display: block;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.annotation-card blockquote {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 8px 0 0;
+}
+.annotation-card > button {
+  align-self: flex-start;
+}
+.conversation-quote > button {
+  color: var(--muted);
+  text-align: left;
+}

@@ -807,5 +807,20 @@
   },
   "imageUnavailable": {
     "message": "Image unavailable. Please ask the agent to generate it again."
+  },
+  "quoteActions": {
+    "message": "Quote actions"
+  },
+  "addToChat": {
+    "message": "Add to chat"
+  },
+  "askInNewChat": {
+    "message": "Ask in new chat"
+  },
+  "removeAnnotation": {
+    "message": "Remove quote"
+  },
+  "quotedFrom": {
+    "message": "Quoted from"
   }
 }
