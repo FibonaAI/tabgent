@@ -46,6 +46,8 @@ let turnId = null,
   threadCwd = null;
 const pending = new Map(),
   items = new Map();
+const runningItems = new Map();
+let waitingStatus = null;
 const optimisticUsers = [];
 let sending = false,
   stopping = false;
@@ -171,12 +173,25 @@ function finishWorklog(seconds) {
 }
 function updateTurnStatus(text) {
   if (!busy || !turnStatus) return;
+  if (text === i18n('working') && runningItems.size) {
+    const active = [...runningItems.values()];
+    text = i18n(
+      active.some((r) => !['reasoning', 'agentMessage', 'plan', 'userMessage'].includes(r.type))
+        ? 'usingTool'
+        : active.some((r) => r.type === 'agentMessage')
+          ? 'replying'
+          : 'thinking',
+    );
+  }
+  if (waitingStatus) text = i18n(waitingStatus);
   if (stopping) text = i18n('stopping');
   if (turnStatus.textContent !== text) turnStatus.textContent = text;
   if ($('messages').lastElementChild !== turnStatus) $('messages').append(turnStatus);
 }
 function setBusy(value, outcome = 'completed') {
   if (value && !busy) {
+    runningItems.clear();
+    waitingStatus = null;
     activeReply = null;
     worklog = null;
     turnStartedAt = performance.now();
@@ -185,6 +200,17 @@ function setBusy(value, outcome = 'completed') {
     turnStatus.setAttribute('role', 'status');
     turnStatus.dataset.status = 'running';
   } else if (!value && busy && turnStatus) {
+    for (const record of runningItems.values()) {
+      record.completed = true;
+      if (record.state) {
+        if (record.type !== 'reasoning') toolDetails(record, record.item, true);
+        record.state.textContent = outcome === 'completed' ? '' : i18n(outcome);
+        record.el.dataset.status =
+          outcome === 'completed' ? 'completed' : outcome === 'failed' ? 'failed' : 'stopped';
+      }
+    }
+    runningItems.clear();
+    waitingStatus = null;
     const follow = nearBottom();
     turnStatus.replaceChildren();
     finishWorklog(Math.max(1, Math.round((performance.now() - turnStartedAt) / 1000)));
@@ -248,6 +274,29 @@ for (const type of ['click', 'auxclick'])
 // CommonMark/GFM parsing with sanitized DOM; never execute model-supplied HTML.
 function markdown(target, text) {
   const fragment = markdownFragment(text);
+  for (const img of fragment.querySelectorAll('img')) {
+    enableImagePreview(img);
+    img.onerror = () =>
+      img.replaceWith(document.createTextNode(img.alt || i18n('imageUnavailable')));
+    if (img.dataset.localImage) {
+      const path = img.dataset.localImage;
+      const key = `${threadId}:${path}`;
+      if (!attachmentPreviews.has(key))
+        attachmentPreviews.set(
+          key,
+          rpc('bridge/image/preview', { path }).then((r) => r.url),
+        );
+      Promise.resolve(attachmentPreviews.get(key))
+        .then((url) => {
+          if (/^data:image\/(png|jpeg|gif|webp|svg\+xml);base64,/.test(url)) img.src = url;
+          else img.onerror();
+        })
+        .catch(() => {
+          attachmentPreviews.delete(key);
+          img.replaceWith(document.createTextNode(i18n('imageUnavailable')));
+        });
+    }
+  }
   for (const a of fragment.querySelectorAll('a')) {
     if (!/^https?:|^mailto:/.test(a.getAttribute('href') || '')) a.removeAttribute('href');
     const intent = a.title === 'browser:current' ? 'current' : 'new';
@@ -574,6 +623,7 @@ function renderItem(item, completed = true, timestamp = Date.now()) {
   if (!item?.id || isLineageNote(item)) return;
   if (item.type === 'userMessage') $('newConversation').disabled = false;
   let record = items.get(item.id);
+  if (record?.completed && !completed) return;
   const optimisticIndex =
     item.type === 'userMessage'
       ? optimisticUsers.findIndex((entry) => entry.clientId === item.clientId)
@@ -619,6 +669,10 @@ function renderItem(item, completed = true, timestamp = Date.now()) {
     document.body.classList.remove('empty');
     if (follow) requestAnimationFrame(scrollEnd);
   }
+  record.completed = completed;
+  record.item = { ...record.item, ...item };
+  if (completed) runningItems.delete(item.id);
+  else if (busy) runningItems.set(item.id, record);
   if (busy) {
     const label =
       item.type === 'reasoning'
@@ -1407,8 +1461,12 @@ addWebUiListener('codex-message', (message) => {
     }
     case 'thread/status/changed': {
       const flags = p.status?.activeFlags || [];
-      if (flags.includes('waitingOnApproval')) updateTurnStatus(i18n('waitingApproval'));
-      else if (flags.includes('waitingOnUserInput')) updateTurnStatus(i18n('waitingAnswer'));
+      waitingStatus = flags.includes('waitingOnApproval')
+        ? 'waitingApproval'
+        : flags.includes('waitingOnUserInput')
+          ? 'waitingAnswer'
+          : null;
+      updateTurnStatus(i18n('working'));
       break;
     }
     case 'thread/queue/changed':

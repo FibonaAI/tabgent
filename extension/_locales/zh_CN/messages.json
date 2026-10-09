@@ -25,5 +25,8 @@
   },
   "collapseAll": {
     "message": "折叠全部"
+  },
+  "imageUnavailable": {
+    "message": "图片暂时无法加载，请让助手重新生成。"
   }
 }

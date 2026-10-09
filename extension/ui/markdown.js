@@ -7,6 +7,7 @@ import hljs from '../vendor/highlight/highlight.js';
 // Code spans and fences remain ordinary Markdown tokens, never math.
 export function markdownFragment(text) {
   const formulas = [];
+  const images = [];
   const marker = `math-${crypto.randomUUID()}`;
   const renderer = (token) => {
     const index = formulas.push(token) - 1;
@@ -14,6 +15,12 @@ export function markdownFragment(text) {
   };
   const parser = new Marked({
     gfm: true,
+    renderer: {
+      image(token) {
+        const index = images.push(token) - 1;
+        return `<span data-${marker}-image="${index}"></span>`;
+      },
+    },
     extensions: [
       {
         name: 'displayMath',
@@ -59,6 +66,22 @@ export function markdownFragment(text) {
     FORBID_TAGS: ['img', 'style', 'input', 'button', 'form', 'iframe', 'svg', 'video', 'audio'],
     FORBID_ATTR: ['style', 'id', 'name'],
   });
+  for (const placeholder of fragment.querySelectorAll(`[data-${marker}-image]`)) {
+    const token = images[Number(placeholder.getAttribute(`data-${marker}-image`))];
+    const img = document.createElement('img');
+    img.alt = token.text || '';
+    img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
+    const src = token.href;
+    if (/^\/(?!\/)/.test(src)) img.dataset.localImage = src;
+    else if (/^https:\/\//i.test(src) || /^data:image\/(png|jpeg|gif|webp);base64,/i.test(src))
+      img.src = src;
+    else {
+      placeholder.textContent = token.text || '';
+      continue;
+    }
+    placeholder.replaceWith(img);
+  }
   for (const code of fragment.querySelectorAll('pre code')) {
     const language = [...code.classList]
       .find((name) => name.startsWith('language-'))

@@ -27,6 +27,25 @@ with tempfile.TemporaryDirectory() as d:
     png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aEn8AAAAASUVORK5CYII="
     saved = attachments.save(root, "image.png", png)
     assert attachments.preview(root, saved)["url"] == "data:image/png;base64," + png
+    thread = {'turns': [{'items': [{'type': 'agentMessage', 'text': f'![Chart](<{saved["path"]}>)'}]}]}
+    assert attachments.reply_image(thread, saved['path'])['url'].startswith('data:image/png;')
+    svg = root / 'chart.svg'
+    svg.write_text('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>')
+    thread['turns'][0]['items'][0]['text'] = f'![Chart]({svg})'
+    assert attachments.reply_image(thread, str(svg))['url'].startswith('data:image/svg+xml;')
+    for text in [str(svg), f'[Link]({svg})', f'![Chart]({svg}.other)']:
+        thread['turns'][0]['items'][0]['text'] = text
+        try:
+            attachments.reply_image(thread, str(svg))
+            raise AssertionError('Unreferenced file accepted')
+        except ValueError:
+            pass
+    thread['turns'][0]['items'][0] = {'type': 'userMessage', 'text': f'![Chart]({svg})'}
+    try:
+        attachments.reply_image(thread, str(svg))
+        raise AssertionError('User content authorized filesystem access')
+    except ValueError:
+        pass
 print("PASS attachment text/offset, image preview, path isolation, invalid upload")
 
 # Local text PDF: no account access or model calls.

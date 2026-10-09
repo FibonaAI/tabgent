@@ -3,6 +3,7 @@
 import base64
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -96,7 +97,7 @@ def read(root, args):
     return value
 
 
-def preview(root, args):
+def preview(root, args, allow_svg=False):
     path = Path(args["path"]).resolve()
     if (
         not path.is_relative_to(root.resolve())
@@ -122,8 +123,27 @@ def preview(root, args):
         )
     )
     if not mime:
-        raise ValueError("Not an image attachment")
+        if not allow_svg or ET.fromstring(raw).tag != '{http://www.w3.org/2000/svg}svg':
+            raise ValueError("Not an image attachment")
+        mime = 'image/svg+xml'
     return {"url": "data:" + mime + ";base64," + base64.b64encode(raw).decode()}
+
+
+def reply_image(thread, path):
+    """Only images explicitly embedded in an assistant reply in this thread."""
+    if not isinstance(path, str) or not path.startswith('/') or path.startswith('//'):
+        raise ValueError('Invalid image path')
+    reference = re.compile(r'!\[[^\]\n]*\]\(\s*(?:<' + re.escape(path) + r'>|' + re.escape(path) + r')(?=\s|\))')
+    if not any(
+        item.get('type') == 'agentMessage' and reference.search(item.get('text', ''))
+        for turn in thread.get('turns', []) for item in turn.get('items', [])
+    ):
+        raise ValueError('Image is not referenced by this conversation')
+    original = Path(path)
+    # Do not follow a substituted symlink to an unrelated local file.
+    if original.is_symlink():
+        raise ValueError('Image symlink is not allowed')
+    return preview(original.parent, {'path': path}, allow_svg=True)
 
 
 def read_pdf(data, page=1, offset=0):

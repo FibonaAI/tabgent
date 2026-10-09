@@ -807,6 +807,15 @@ select option {
   max-width: 220px;
   font-size: 12px;
 }
+.message.agent img {
+  display: block;
+  max-width: 100%;
+  max-height: 560px;
+  height: auto;
+  object-fit: contain;
+  border-radius: 6px;
+  cursor: zoom-in;
+}
 .message.user img {
   width: 64px;
   height: 64px;

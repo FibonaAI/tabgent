@@ -7,6 +7,7 @@ for (const file of [
   'selection-routing.mjs',
   'native-disconnect.mjs',
   'attachments.py',
+  'warm-session.py',
   'install.py',
   'store-setup.cjs',
   'selection.cjs',

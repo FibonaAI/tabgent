@@ -46,6 +46,16 @@ const { chromium } = require('playwright');
         document.querySelector('#fixture').replaceChildren(markdownFragment(text));
       }, text);
     const equation = String.raw`V^\pi(s)=\mathbb E_\pi[r+\gamma V^\pi(s')]`;
+    await render(
+      '![Chart](</tmp/chart one.svg>)\n\n<img src="https://example.com/raw.png" onerror="alert(1)">\n\n![bad](javascript:alert)',
+    );
+    assert.equal(await page.locator('img').count(), 1);
+    assert.equal(await page.locator('img').getAttribute('data-local-image'), '/tmp/chart one.svg');
+    assert.equal(await page.locator('img').getAttribute('src'), null);
+    await render(
+      '![Pixel](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aEn8AAAAASUVORK5CYII=)',
+    );
+    assert((await page.locator('img').getAttribute('src')).startsWith('data:image/png;'));
     await render(`写成公式：\n\n\\[\n${equation}\n\\]\n\n行内公式：\\(x^2 + y^2\\)。`);
     assert.equal(await page.locator('.katex-display').count(), 1);
     assert.equal(await page.locator('.katex').count(), 2);

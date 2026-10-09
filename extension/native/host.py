@@ -96,6 +96,7 @@ class Session:
         self.ready = False
         self.start_lock = threading.Lock()
         self.starting = False
+        self.setup_results = {}
 
     def emit(self, message):
         if not self.closed:
@@ -267,6 +268,7 @@ class Session:
                 )
             self.project_id = project["project"]["id"]
             account = self.rpc("account/read")
+            self.setup_results = {"account/read": account}
             if account.get("account") or account.get("requiresOpenaiAuth") is False:
                 self.thread_response = self.rpc(
                     "thread/resume" if self.resume_thread_id else "thread/start",
@@ -277,6 +279,11 @@ class Session:
                     }),
                 )
                 self.thread = self.thread_response["thread"]
+                # Warm the remaining composer dependency before advertising readiness.
+                try:
+                    self.setup_results["model/list"] = self.rpc("model/list")
+                except Exception:
+                    pass  # The UI can retry model discovery through its normal error path.
             self.ready = True
             self.emit_ready()
             POOL.submit(self.sync_lineage)
@@ -313,6 +320,14 @@ class Session:
 
     def request(self, message, lineage_flushed=False):
         method = message.get("method")
+        if (
+            method in getattr(self, "setup_results", {})
+            and not message.get("params")
+        ):
+            if self.auth == auth_stamp():
+                self.emit({"id": message["id"], "result": self.setup_results.pop(method)})
+                return
+            self.setup_results.clear()
         if method == "bridge/permissions/set":
             def set_permissions():
                 try:
@@ -418,6 +433,16 @@ class Session:
                         },
                     }
                 )
+            return
+        if method == "bridge/image/preview":
+            def image_preview():
+                try:
+                    result = self.rpc('thread/read', {'threadId': self.thread['id'], 'includeTurns': True})
+                    image = attachments.reply_image(result['thread'], message['params']['path'])
+                    self.emit({'id': message['id'], 'result': image})
+                except Exception:
+                    self.emit({'id': message['id'], 'error': {'code': -32000, 'message': 'Image unavailable'}})
+            POOL.submit(image_preview)
             return
         if method == "bridge/attachment/preview":
             try:

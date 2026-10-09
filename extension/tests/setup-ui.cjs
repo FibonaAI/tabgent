@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, '..');
 const bridge = `
 const listeners=new Map();
 const mode=new URL(location.href).searchParams.get('mode');
-if(!sessionStorage.started){sessionStorage.started='1';sessionStorage.installed=String(mode!=='install');sessionStorage.helper=String(mode!=='helper');sessionStorage.auth=String(['selection','transcript'].includes(mode)||mode.startsWith('setup-'));sessionStorage.draft='keep my draft';}
+if(!sessionStorage.started){sessionStorage.started='1';sessionStorage.installed=String(mode!=='install');sessionStorage.helper=String(mode!=='helper');sessionStorage.auth=String(['selection','transcript','tool-burst'].includes(mode)||mode.startsWith('setup-'));sessionStorage.draft='keep my draft';}
 let queueEntries=[];
 let authenticated=sessionStorage.auth==='true';
 const emit=(method,params={})=>listeners.get('codex-message')?.({method,params});
@@ -23,6 +23,7 @@ export const bridge={threadId:mode.startsWith('setup-')&&mode!=='setup-new'?'tes
  if(m.method==='account/login/start'&&mode==='timeout'&&!sessionStorage.retry)return;
  if(window.setupTest.failMethod===m.method){setTimeout(()=>listeners.get('codex-message')?.({id:m.id,error:{message:'Test action failure'}}),0);return;}
  let result={};
+ if(m.method==='bridge/image/preview')result={url:'data:image/svg+xml;base64,'+btoa('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="140"><rect width="400" height="140" fill="#eee"/><text x="30" y="75" font-size="24">Generated chart</text></svg>')};
  if(m.method==='thread/queue/list')result={data:queueEntries,nextCursor:null};
  if(m.method==='thread/queue/add'){const entry={id:crypto.randomUUID(),clientUserMessageId:m.params.clientUserMessageId,input:m.params.input};queueEntries.push(entry);result={queuedSubmission:entry};}
  if(m.method==='thread/queue/update'){const entry=queueEntries.find(q=>q.id===m.params.queuedSubmissionId);entry.input=m.params.input;result={queuedSubmission:entry};}
@@ -107,6 +108,7 @@ export function saveScopePreference(){}
       'setup-model-failure',
       'setup-new',
       'setup-missing',
+      'tool-burst',
       'transcript',
       'attach-failure',
       'selection',
@@ -138,6 +140,78 @@ export function saveScopePreference(){}
       const errors = [];
       page.on('pageerror', (e) => errors.push(e.message));
       await page.goto('http://127.0.0.1:' + server.address().port + '/ui/chat.html?mode=' + mode);
+      if (mode === 'tool-burst') {
+        await page.waitForFunction(() => !document.querySelector('#prompt').disabled);
+        await page.evaluate(() => {
+          setupTest.emit('turn/started', { turn: { id: 'burst' } });
+          for (let i = 0; i < 150; i++)
+            setupTest.emit('item/started', {
+              turnId: 'burst',
+              item: { id: 'tool-' + i, type: 'mcpToolCall', server: 'browser', tool: 'read' },
+            });
+          setupTest.emit('item/completed', {
+            turnId: 'burst',
+            item: {
+              id: 'tool-0',
+              type: 'mcpToolCall',
+              server: 'browser',
+              tool: 'read',
+              status: 'completed',
+            },
+          });
+        });
+        assert.equal(
+          await page.locator('.turn-status[data-status="running"]').innerText(),
+          messages.usingTool.message,
+          '149 tools still run after one completes',
+        );
+        await page.evaluate(() => {
+          setupTest.emit('thread/status/changed', {
+            status: { activeFlags: ['waitingOnApproval'] },
+          });
+          for (let i = 1; i < 100; i++)
+            setupTest.emit('item/completed', {
+              turnId: 'burst',
+              item: { id: 'tool-' + i, type: 'mcpToolCall', server: 'browser', tool: 'read' },
+            });
+        });
+        assert.equal(
+          await page.locator('.turn-status[data-status="running"]').innerText(),
+          messages.waitingApproval.message,
+          'Concurrent tool completions must not overwrite approval status',
+        );
+        await page.evaluate(() =>
+          setupTest.emit('thread/status/changed', { status: { activeFlags: [] } }),
+        );
+        assert.equal(
+          await page.locator('.turn-status[data-status="running"]').innerText(),
+          messages.usingTool.message,
+        );
+        await page.evaluate(() =>
+          setupTest.emit('turn/completed', { turn: { id: 'burst', status: 'interrupted' } }),
+        );
+        assert.equal(
+          await page.locator('.activity[data-status="running"]').count(),
+          0,
+          'Interrupted tools must stop spinning',
+        );
+        assert.equal(
+          await page.getByText(messages.waitingTool.message, { exact: true }).count(),
+          0,
+          'Stopped tools must not retain a waiting-for-result detail',
+        );
+        await page.evaluate(() =>
+          setupTest.emit('item/started', {
+            turnId: 'burst',
+            item: { id: 'tool-149', type: 'mcpToolCall', server: 'browser', tool: 'read' },
+          }),
+        );
+        assert.equal(await page.locator('.activity[data-status="running"]').count(), 0);
+        assert.deepEqual(errors, []);
+        console.log('PASS 150 concurrent tools, partial completion and interruption state');
+        await context.close();
+        continue;
+      }
       if (mode.startsWith('setup-')) {
         await page.waitForFunction(() => typeof setupTest.releaseModels === 'function');
         if (mode === 'setup-resume' || mode === 'setup-model-failure') {
@@ -218,6 +292,26 @@ export function saveScopePreference(){}
           await page.locator('.message.user').last().innerText(),
           'Open the next episode',
         );
+        await page.evaluate(() => document.querySelector('#messages').replaceChildren());
+
+        await page.evaluate(() =>
+          setupTest.emit('item/completed', {
+            item: { id: 'generated-chart', type: 'agentMessage', text: '![Chart](/tmp/chart.svg)' },
+          }),
+        );
+        const chart = page.locator('.message.agent img[alt="Chart"]');
+        await chart.waitFor();
+        await page.waitForFunction(
+          () => document.querySelector('img[alt="Chart"]')?.naturalWidth === 400,
+        );
+        assert(
+          (await chart.boundingBox()).width > 64,
+          'Reply images are not attachment thumbnails',
+        );
+        await chart.click();
+        assert(await page.locator('#imagePreview').isVisible());
+        await page.screenshot({ path: '/tmp/tabgent-generated-image.png' });
+        await page.locator('#imagePreviewClose').click();
         await page.evaluate(() => document.querySelector('#messages').replaceChildren());
 
         await page.evaluate(() =>

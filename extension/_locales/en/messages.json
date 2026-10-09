@@ -804,5 +804,8 @@
   },
   "collapseAll": {
     "message": "Collapse all"
+  },
+  "imageUnavailable": {
+    "message": "Image unavailable. Please ask the agent to generate it again."
   }
 }
