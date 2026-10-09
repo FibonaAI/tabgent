@@ -1,9 +1,11 @@
 // Persistent URL-to-thread index. Conversation bodies remain in Codex storage.
+const pageUrl = (url) => (url || '').split('#', 1)[0];
 export function createUrlHistory(storage) {
   let entries = {},
     writes = Promise.resolve();
   const loaded = storage.get('urlHistory').then((data) => {
     entries = data.urlHistory || {};
+    for (const entry of Object.values(entries)) entry.urls = [...new Set(entry.urls.map(pageUrl))];
   });
   return {
     async get(threadId) {
@@ -12,6 +14,7 @@ export function createUrlHistory(storage) {
     },
     async record(session, url) {
       await loaded;
+      url = pageUrl(url);
       if (!session.threadId || !url) return;
       const old = entries[session.threadId];
       if (!session.hasUserInput && !old?.hasUserInput) return;
@@ -38,7 +41,7 @@ export function createUrlHistory(storage) {
     },
     async list(url, verify) {
       await loaded;
-      const urls = Array.isArray(url) ? url : [url];
+      const urls = (Array.isArray(url) ? url : [url]).map(pageUrl);
       const matches = (entry) => entry.urls.some((page) => urls.includes(page));
       if (verify) {
         for (const entry of Object.values(entries).filter((e) => matches(e) && !e.hasUserInput)) {

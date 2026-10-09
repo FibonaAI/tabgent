@@ -42,3 +42,38 @@ history = createUrlHistory(storage);
 assert.equal((await history.list('https://old.test', async (id) => id === 'legacyReal')).length, 1);
 assert(!data.urlHistory.legacyEmpty);
 console.log('PASS empty threads excluded / old empty entries removed / real history retained');
+
+// Different document anchors and PDF page numbers share a page's history.
+await history.record(
+  { hasUserInput: true, threadId: 'pdf' },
+  'https://example.test/doc.pdf#page=3',
+);
+await history.record(
+  { hasUserInput: true, threadId: 'pdf' },
+  'https://example.test/doc.pdf#page=10',
+);
+assert.deepEqual((await history.get('pdf')).urls, ['https://example.test/doc.pdf']);
+assert.equal((await history.list('https://example.test/doc.pdf#page=20'))[0].threadId, 'pdf');
+assert.equal(
+  (await history.list(['https://other.test', 'https://example.test/doc.pdf#section']))[0].threadId,
+  'pdf',
+);
+// Old records also match without needing to send another message.
+data.urlHistory.anchored = {
+  hasUserInput: true,
+  threadId: 'anchored',
+  urls: ['https://example.test/old#one', 'https://example.test/old#two'],
+};
+history = createUrlHistory(storage);
+assert.equal((await history.list('https://example.test/old'))[0].threadId, 'anchored');
+assert.deepEqual((await history.get('anchored')).urls, ['https://example.test/old']);
+await history.record(
+  { hasUserInput: true, threadId: 'encoded' },
+  'https://example.test/a%23b?q=%23value#section',
+);
+assert.equal((await history.list('https://example.test/a%23b?q=%23value'))[0].threadId, 'encoded');
+assert.equal((await history.list('https://example.test/a%23b?q=other')).length, 0);
+assert.equal((await history.list('https://example.test/a#b?q=%23value')).length, 0);
+console.log(
+  'PASS fragment-free grouping / deduplication / legacy records / encoded hashes and query parameters',
+);
