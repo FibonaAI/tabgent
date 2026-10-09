@@ -38,23 +38,18 @@ export function createAnnotations({ i18n, thread, title, changed, newChat, showE
     values = cleanAnnotations(next);
     list.replaceChildren();
     list.hidden = !values.length;
-    for (const value of values) {
+    for (const [index, value] of values.entries()) {
       const card = document.createElement('div');
       card.className = 'annotation-card';
-      const detail = document.createElement('details');
-      const summary = document.createElement('summary');
-      summary.textContent = value.text;
-      const source = document.createElement('small');
-      source.textContent = `${i18n('quotedFrom')} ${value.title}`;
-      const quote = document.createElement('blockquote');
-      quote.textContent = value.text;
-      detail.append(summary, source, quote);
+      const label = document.createElement('span');
+      label.textContent = i18n('annotationLabel', index + 1);
+      card.title = `${i18n('quotedFrom')} ${value.title}\n\n${value.text}`;
       const remove = document.createElement('button');
       remove.type = 'button';
       remove.textContent = '×';
       remove.title = remove.ariaLabel = i18n('removeAnnotation');
       remove.onclick = () => set(values.filter((a) => a.id !== value.id));
-      card.append(detail, remove);
+      card.append(label, remove);
       list.append(card);
     }
     if (notify) changed(values);
@@ -66,16 +61,22 @@ export function createAnnotations({ i18n, thread, title, changed, newChat, showE
       hide();
       return;
     }
-    const range = selection.getRangeAt(0);
+    const range = selection.getRangeAt(0).cloneRange();
     const element = (n) => (n.nodeType === Node.ELEMENT_NODE ? n : n.parentElement);
     const body = element(range.startContainer)?.closest('.message-body, article.message.user');
-    if (
-      !body ||
-      !document.getElementById('messages').contains(body) ||
-      !body.contains(range.endContainer)
-    ) {
+    if (!body || !document.getElementById('messages').contains(body)) {
       hide();
       return;
+    }
+    if (!body.contains(range.endContainer)) {
+      // Whole-paragraph selection can end at the following Copy button's boundary.
+      const trailing = range.cloneRange();
+      trailing.setStart(body, body.childNodes.length);
+      if (trailing.toString().trim()) {
+        hide();
+        return;
+      }
+      range.setEnd(body, body.childNodes.length);
     }
     const article = body.closest('article.message');
     if (!article?.dataset.messageId || !selection.toString().trim()) {
@@ -85,7 +86,7 @@ export function createAnnotations({ i18n, thread, title, changed, newChat, showE
     const before = range.cloneRange();
     before.selectNodeContents(body);
     before.setEnd(range.startContainer, range.startOffset);
-    const text = selection.toString();
+    const text = range.toString();
     selected = {
       id: crypto.randomUUID(),
       text,
@@ -100,7 +101,9 @@ export function createAnnotations({ i18n, thread, title, changed, newChat, showE
     toolbar.style.left = `${Math.max(8, Math.min(rect.left, innerWidth - toolbar.offsetWidth - 8))}px`;
     toolbar.style.top = `${Math.max(8, Math.min(rect.top - toolbar.offsetHeight - 8, innerHeight - toolbar.offsetHeight - 8))}px`;
   }
-  document.addEventListener('pointerup', capture);
+  // Native double/triple-click selection and popover light-dismiss finish after pointerup.
+  document.addEventListener('click', capture);
+  document.addEventListener('dblclick', capture);
   document.addEventListener('keyup', (event) => {
     if (event.key !== 'Escape' && event.key !== 'Tab') capture(event);
   });

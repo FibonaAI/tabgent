@@ -1820,41 +1820,26 @@ body.history-open {
 }
 #annotations {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 6px;
-  max-height: 200px;
+  max-height: 120px;
   overflow: auto;
   padding: 8px 12px 0;
 }
 .annotation-card {
-  display: flex;
-  gap: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
-}
-.annotation-card details {
-  flex: 1;
-  min-width: 0;
-}
-.annotation-card summary {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  border-radius: 6px;
+  background: var(--hover);
+  padding: 3px 8px;
+  font-size: 12px;
   white-space: nowrap;
-  cursor: pointer;
-}
-.annotation-card small {
-  display: block;
-  color: var(--muted);
-  margin-top: 8px;
-}
-.annotation-card blockquote {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  margin: 8px 0 0;
 }
 .annotation-card > button {
-  align-self: flex-start;
+  padding: 2px 4px;
+  color: var(--muted);
 }
 .conversation-quote > button {
   color: var(--muted);

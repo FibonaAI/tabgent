@@ -822,5 +822,8 @@
   },
   "quotedFrom": {
     "message": "Quoted from"
+  },
+  "annotationLabel": {
+    "message": "Annotation $1"
   }
 }

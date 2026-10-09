@@ -166,13 +166,26 @@ export function saveScopePreference(){}
               range.setEnd(text, end);
               getSelection().removeAllRanges();
               getSelection().addRange(range);
-              text.parentElement.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+              text.parentElement.dispatchEvent(new MouseEvent('click', { bubbles: true }));
             },
             { start, end },
           );
           assert(await page.locator('#annotationToolbar').isVisible());
         };
         await addAnswer();
+        const passage = page.locator('[data-message-id="quoted-answer"] .message-body p');
+        await passage.dblclick({ position: { x: 10, y: 8 } });
+        assert(
+          await page.locator('#annotationToolbar').isVisible(),
+          'double click shows quote menu',
+        );
+        await page.keyboard.press('Escape');
+        await passage.click({ clickCount: 3, position: { x: 10, y: 8 } });
+        assert(
+          await page.locator('#annotationToolbar').isVisible(),
+          'whole-line selection shows quote menu',
+        );
+        await page.keyboard.press('Escape');
         await select(0, 13);
         await page.locator('#annotationAdd').click();
         await select(15, 29);
@@ -185,6 +198,10 @@ export function saveScopePreference(){}
         await page.screenshot({ path: '/tmp/tabgent-annotation-composer.png' });
         await page.setViewportSize({ width: 1280, height: 720 });
         assert.equal(await page.locator('.annotation-card').count(), 2);
+        assert.deepEqual(await page.locator('.annotation-card > span').allTextContents(), [
+          'Annotation 1',
+          'Annotation 2',
+        ]);
         await page.reload();
         await page.waitForFunction(
           () => document.querySelector('#connection').dataset.state === 'ready',

@@ -43,5 +43,8 @@
   },
   "quotedFrom": {
     "message": "引用自"
+  },
+  "annotationLabel": {
+    "message": "Annotation $1"
   }
 }
