@@ -195,13 +195,29 @@ export function saveScopePreference(){}
         assert(toolbarBounds.x >= 0 && toolbarBounds.x + toolbarBounds.width <= 420);
         await page.screenshot({ path: '/tmp/tabgent-annotation-toolbar.png' });
         await page.locator('#annotationAdd').click();
+        const label = page.locator('.annotation-label').first();
+        await label.click();
+        assert(await page.locator('#annotationDetails').isVisible());
+        assert((await page.locator('#annotationDetails').innerText()).includes('First passage'));
+        assert((await page.locator('#annotationDetails').innerText()).includes('Quoted from'));
+        await page.screenshot({ path: '/tmp/tabgent-annotation-preview.png' });
+        await page.locator('#prompt').click();
+        assert(!(await page.locator('#annotationDetails').isVisible()));
+        await label.focus();
+        await page.keyboard.press('Enter');
+        assert(await page.locator('#annotationDetails').isVisible());
+        await page.keyboard.press('Escape');
+        assert(!(await page.locator('#annotationDetails').isVisible()));
+        const chip = await page.locator('.annotation-card').first().boundingBox();
+        const prompt = await page.locator('#prompt').boundingBox();
+        assert(Math.abs(chip.x - prompt.x - 1) < 2, 'quote aligns with input text');
         await page.screenshot({ path: '/tmp/tabgent-annotation-composer.png' });
         await page.setViewportSize({ width: 1280, height: 720 });
         assert.equal(await page.locator('.annotation-card').count(), 2);
-        assert.deepEqual(await page.locator('.annotation-card > span').allTextContents(), [
-          'Annotation 1',
-          'Annotation 2',
-        ]);
+        assert.deepEqual(
+          await page.locator('.annotation-card .annotation-label').allTextContents(),
+          ['Annotation 1', 'Annotation 2'],
+        );
         await page.reload();
         await page.waitForFunction(
           () => document.querySelector('#connection').dataset.state === 'ready',
@@ -211,7 +227,7 @@ export function saveScopePreference(){}
           2,
           'draft quotes survive reload',
         );
-        await page.locator('.annotation-card > button').first().click();
+        await page.locator('.annotation-card .annotation-remove').first().click();
         assert.equal(await page.locator('.annotation-card').count(), 1);
         await addAnswer();
         await select(0, 13);

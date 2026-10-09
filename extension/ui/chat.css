@@ -1008,7 +1008,8 @@ select option {
   box-shadow: inset 0 0 0 1px var(--border);
 }
 #contextDetails,
-#historyUrlDetails {
+#historyUrlDetails,
+#annotationDetails {
   position: fixed;
   inset: auto;
   margin: 0;
@@ -1824,7 +1825,7 @@ body.history-open {
   gap: 6px;
   max-height: 120px;
   overflow: auto;
-  padding: 8px 12px 0;
+  padding: 0 1px 4px;
 }
 .annotation-card {
   display: inline-flex;
@@ -1839,7 +1840,23 @@ body.history-open {
 }
 .annotation-card > button {
   padding: 2px 4px;
+}
+.annotation-card .annotation-label {
+  color: var(--ink);
+}
+.annotation-card .annotation-remove {
   color: var(--muted);
+}
+#annotationDetails {
+  width: 360px;
+  max-width: calc(100vw - 16px);
+  max-height: min(320px, 50vh);
+  white-space: pre-wrap;
+  user-select: text;
+}
+.annotation-source {
+  color: var(--muted);
+  margin-bottom: 8px;
 }
 .conversation-quote > button {
   color: var(--muted);

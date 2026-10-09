@@ -29,22 +29,55 @@ export function createAnnotations({ i18n, thread, title, changed, newChat, showE
   const list = document.getElementById('annotations');
   const toolbar = document.getElementById('annotationToolbar');
   const prompt = document.getElementById('prompt');
+  const preview = document.createElement('div');
+  preview.id = 'annotationDetails';
+  preview.popover = 'auto';
+  document.body.append(preview);
+  let previewButton = null;
+  preview.addEventListener('toggle', () => {
+    previewButton?.setAttribute('aria-expanded', String(preview.matches(':popover-open')));
+  });
   let values = [],
     selected = null;
   const hide = () => {
     if (toolbar.matches(':popover-open')) toolbar.hidePopover();
   };
   function set(next, notify = true) {
+    if (preview.matches(':popover-open')) preview.hidePopover();
     values = cleanAnnotations(next);
     list.replaceChildren();
     list.hidden = !values.length;
     for (const [index, value] of values.entries()) {
       const card = document.createElement('div');
       card.className = 'annotation-card';
-      const label = document.createElement('span');
+      const label = document.createElement('button');
+      label.type = 'button';
+      label.className = 'annotation-label';
+      label.setAttribute('aria-expanded', 'false');
+      label.setAttribute('aria-controls', preview.id);
       label.textContent = i18n('annotationLabel', index + 1);
       card.title = `${i18n('quotedFrom')} ${value.title}\n\n${value.text}`;
+      label.onclick = () => {
+        if (previewButton === label && preview.matches(':popover-open')) {
+          preview.hidePopover();
+          return;
+        }
+        previewButton?.setAttribute('aria-expanded', 'false');
+        previewButton = label;
+        const source = document.createElement('div');
+        source.className = 'annotation-source';
+        source.textContent = `${i18n('quotedFrom')} ${value.title}`;
+        const quote = document.createElement('div');
+        quote.textContent = value.text;
+        preview.replaceChildren(source, quote);
+        preview.showPopover();
+        label.setAttribute('aria-expanded', 'true');
+        const rect = card.getBoundingClientRect();
+        preview.style.left = `${Math.max(8, Math.min(rect.left, innerWidth - preview.offsetWidth - 8))}px`;
+        preview.style.top = `${Math.max(8, rect.top - preview.offsetHeight - 8)}px`;
+      };
       const remove = document.createElement('button');
+      remove.className = 'annotation-remove';
       remove.type = 'button';
       remove.textContent = '×';
       remove.title = remove.ariaLabel = i18n('removeAnnotation');
@@ -55,7 +88,12 @@ export function createAnnotations({ i18n, thread, title, changed, newChat, showE
     if (notify) changed(values);
   }
   function capture(event) {
-    if (toolbar.contains(event.target)) return;
+    if (
+      toolbar.contains(event.target) ||
+      list.contains(event.target) ||
+      preview.contains(event.target)
+    )
+      return;
     const selection = window.getSelection();
     if (!selection?.rangeCount || selection.isCollapsed || !thread()) {
       hide();
