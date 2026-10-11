@@ -1862,3 +1862,67 @@ body.history-open {
   color: var(--muted);
   text-align: left;
 }
+
+.mermaid-view {
+  padding: 16px;
+  overflow: auto;
+}
+.message.agent .mermaid-view img {
+  max-width: 100%;
+  max-height: none;
+  margin: auto;
+  cursor: default;
+}
+.mermaid-render-host {
+  position: fixed;
+  left: -100000px;
+  top: 0;
+  width: 1000px;
+}
+
+.message.user .message-actions {
+  justify-content: flex-end;
+  white-space: normal;
+}
+.message-actions button svg {
+  display: block;
+}
+.message.user.editing {
+  width: 100%;
+  max-width: 100%;
+}
+.message-editor textarea {
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline-offset: 3px;
+}
+.edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.edit-actions button {
+  border-radius: 12px;
+  padding: 6px 12px;
+  background: var(--bg);
+}
+.edit-actions .edit-send {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+.message.user:has(> .message-actions) {
+  position: relative;
+  margin-bottom: 38px;
+}
+.message.user > .message-actions {
+  position: absolute;
+  top: 100%;
+  right: 0;
+}

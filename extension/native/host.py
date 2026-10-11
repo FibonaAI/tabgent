@@ -13,6 +13,7 @@ import time
 import uuid
 import attachments
 import lineage
+import message_fork
 
 HOME = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
 LOCK = threading.Lock()
@@ -328,6 +329,16 @@ class Session:
                 self.emit({"id": message["id"], "result": self.setup_results.pop(method)})
                 return
             self.setup_results.clear()
+        if method == "bridge/thread/forkMessage":
+            def fork_message():
+                try:
+                    params = message.get("params", {})
+                    result = message_fork.fork(self, params.get("messageId"), params.get("edit") is True)
+                    self.emit({"id": message["id"], "result": result})
+                except Exception as error:
+                    self.emit({"id": message["id"], "error": {"code": -32000, "message": str(error)}})
+            POOL.submit(fork_message)
+            return
         if method == "bridge/permissions/set":
             def set_permissions():
                 try:

@@ -26,3 +26,6 @@ and GitHub light/dark themes provide local code-block syntax highlighting.
 
 YAML 2.9.1 by Eemeli Aro is bundled in `extension/vendor/yaml/` under ISC.
 Its browser ESM build parses YAML locally for the collapsible code view.
+
+Mermaid 12.1.0 is bundled in `extension/vendor/mermaid/` under MIT.
+Its ESM build and diagram chunks render Mermaid code locally, without a CDN.

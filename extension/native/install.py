@@ -38,6 +38,7 @@ host = home / "host.py"
 shutil.copy2(root / "native/host.py", host)
 shutil.copy2(root / "native/attachments.py", home / "attachments.py")
 shutil.copy2(root / "native/lineage.py", home / "lineage.py")
+shutil.copy2(root / "native/message_fork.py", home / "message_fork.py")
 launcher = home / "connector"
 launcher.write_text(
     "#!/bin/sh\nexport CODEX_HOME="

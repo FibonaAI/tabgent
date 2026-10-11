@@ -825,5 +825,20 @@
   },
   "annotationLabel": {
     "message": "Annotation $1"
+  },
+  "showDiagram": {
+    "message": "Show diagram"
+  },
+  "diagramUnavailable": {
+    "message": "Diagram could not be rendered. The source is shown above."
+  },
+  "editMessage": {
+    "message": "Edit message"
+  },
+  "forkMessage": {
+    "message": "Fork from here"
+  },
+  "send": {
+    "message": "Send"
   }
 }

@@ -9,7 +9,7 @@
     "message": "切换到折叠视图"
   },
   "showCode": {
-    "message": "切换到代码视图"
+    "message": "查看代码"
   },
   "structuredUnavailable": {
     "message": "无法显示折叠视图，请检查语法或缩短代码块。"
@@ -46,5 +46,20 @@
   },
   "annotationLabel": {
     "message": "Annotation $1"
+  },
+  "showDiagram": {
+    "message": "查看图表"
+  },
+  "diagramUnavailable": {
+    "message": "暂时无法显示图表，可查看上方代码。"
+  },
+  "editMessage": {
+    "message": "编辑消息"
+  },
+  "forkMessage": {
+    "message": "从这里创建分支"
+  },
+  "send": {
+    "message": "发送"
   }
 }

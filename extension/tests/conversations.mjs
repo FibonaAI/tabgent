@@ -346,6 +346,51 @@ assert(
   ).error,
 );
 assert.equal((await attach(1)).messages[0].state.threadId, 'thread-one');
+// Two live sessions keep routing and drafts isolated through repeated sidebar reloads.
+let switchingView = await attach(1);
+const draftByThread = new Map();
+for (let i = 0; i < 20; i++) {
+  const state = switchingView.messages[0].state;
+  const draft = `draft-${state.threadId}-${i}`;
+  await switchingView.send({ type: 'draft', text: draft });
+  draftByThread.set(state.threadId, draft);
+  const targetThread = i % 2 === 0 ? 'fresh-thread' : 'thread-one';
+  assert(
+    !(
+      await call({
+        type: 'switchHistory',
+        conversationKey: state.conversationKey,
+        companionTabId: 1,
+        threadId: targetThread,
+      })
+    ).error,
+  );
+  await switchingView.p.onDisconnect.emit();
+  switchingView = await attach(1);
+  assert.equal(switchingView.messages[0].state.threadId, targetThread);
+  if (draftByThread.has(targetThread))
+    assert.equal(switchingView.messages[0].state.draft, draftByThread.get(targetThread));
+  switchingView.messages.length = 1;
+  for (const thread of ['thread-one', 'fresh-thread']) {
+    const owner = saved.conversations.find(([, s]) => s.threadId === thread)[1];
+    await native.onMessage.emit({
+      session: owner.id,
+      message: {
+        method: 'item/agentMessage/delta',
+        params: { threadId: thread, itemId: `answer-${thread}`, delta: `update-${i}` },
+      },
+    });
+  }
+  const deltas = switchingView.messages.filter(
+    (m) => m.value?.method === 'item/agentMessage/delta',
+  );
+  assert.equal(deltas.length, 1);
+  assert.equal(deltas[0].value.params.threadId, targetThread);
+}
+await switchingView.p.onDisconnect.emit();
+console.log(
+  'PASS 20 switches between concurrent conversations: draft persistence and event isolation',
+);
 const otherPage = await chrome.tabs.create({ url: 'https://example.test/', windowId: 2 });
 await attach(otherPage.id);
 assert(
@@ -656,6 +701,51 @@ console.log(
   'PASS reciprocal lineage routing / duplicate events / closed parent / full Agent source / noopener / URL validation',
 );
 
+// Fork adoption is restricted to ids returned by the source's native request.
+const forkTab = await chrome.tabs.create({ url: 'https://fork.test/' });
+const forkView = await attach(forkTab.id);
+const forkSource = saved.conversations.find(([key]) => key === forkTab.id)[1];
+await forkView.send({ type: 'bind', threadId: 'fork-source' });
+assert(
+  (
+    await call({
+      type: 'newConversation',
+      conversationKey: forkTab.id,
+      fork: { threadId: 'unrelated' },
+    })
+  ).error,
+);
+await forkView.send({
+  type: 'ui',
+  name: 'codexRpc',
+  args: [{ id: 777, method: 'bridge/thread/forkMessage', params: { messageId: 'message' } }],
+});
+const forkRequest = sent.at(-1);
+await native.onMessage.emit({
+  session: forkSource.id,
+  message: { id: forkRequest.message.id, result: { thread: { id: 'verified-fork', turns: [] } } },
+});
+const forkInput = [{ type: 'text', text: 'Edited question' }];
+const createdFork = await call({
+  type: 'newConversation',
+  conversationKey: forkTab.id,
+  settings: copiedSettings,
+  fork: { threadId: 'verified-fork', input: forkInput },
+});
+assert(!createdFork.error, createdFork.error);
+const forkAttached = await attach(forkTab.id);
+assert.equal(forkAttached.messages[0].state.threadId, 'verified-fork');
+assert.deepEqual(
+  (await call({ type: 'takeForkInput', conversationKey: createdFork.conversationKey })).input,
+  forkInput,
+);
+assert.equal(
+  (await call({ type: 'takeForkInput', conversationKey: createdFork.conversationKey })).input,
+  null,
+);
+assert.equal(saved.conversations.find(([key]) => key === forkTab.id)[1].threadId, 'fork-source');
+console.log('PASS verified fork switches view, retains original, and consumes edited input once');
+
 const { startBridge, newConversation } = await import('../bridge.js');
 let portListener;
 const uiCalls = [];
@@ -688,6 +778,7 @@ await newConversation(copiedSettings);
 assert.equal(openedWindow, undefined);
 assert.deepEqual(uiCalls.at(-1), {
   type: 'newConversation',
+  fork: null,
   annotations: [],
   companionTabId: undefined,
   windowId: 2,

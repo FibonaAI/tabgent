@@ -5,6 +5,7 @@ import { createRelations, isLineageNote } from './relations.js';
 import { createFollowups, selectionContextPrefix } from './followups.js';
 import { createCommands } from './commands.js';
 import { markdownFragment } from './markdown.js';
+import { addMermaidView } from './mermaid-code.js';
 import { addStructuredView } from './structured-code.js';
 import {
   bridge,
@@ -13,6 +14,7 @@ import {
   openRelatedThread,
   openConversationLink,
   newConversation,
+  takeForkInput,
   startBridge,
   bindThread,
   saveViewDraft,
@@ -49,6 +51,8 @@ const pending = new Map(),
   items = new Map();
 const runningItems = new Map();
 let waitingStatus = null;
+// Live lifecycle events can overtake the history RPC while its storage work finishes.
+const setupTurnUpdates = new Map();
 const optimisticUsers = [];
 let sending = false,
   stopping = false;
@@ -262,6 +266,7 @@ function setBusy(value, outcome = 'completed') {
   document.body.classList.toggle('busy', value);
   $('model').disabled = value;
   $('effort').disabled = value;
+  updateMessageActions();
 }
 function scrollEnd() {
   const e = $('scroll');
@@ -341,6 +346,7 @@ function markdown(target, text) {
     copy.onclick = () => copyText(copy, code?.textContent || pre.textContent);
     block.append(pre);
     addStructuredView(block, heading, pre, code, i18n);
+    addMermaidView(block, heading, pre, code, i18n);
   }
   for (const table of [...fragment.querySelectorAll('table')]) {
     const wrap = document.createElement('div');
@@ -710,6 +716,8 @@ function renderItem(item, completed = true, timestamp = Date.now()) {
     el.className = 'message user';
     renderUserInput(el, item.content || []);
     el.hidden = !el.childElementCount;
+    record.actions = node('div', null, el);
+    record.actions.className = 'message-actions';
   } else if (item.type === 'agentMessage' || item.type === 'plan') {
     record.text = item.text ?? record.text;
     record.phase = item.phase ?? record.phase;
@@ -731,6 +739,135 @@ function renderItem(item, completed = true, timestamp = Date.now()) {
     if (heading) record.label.textContent = heading[1];
   } else {
     toolDetails(record, item, completed);
+  }
+  if (['userMessage', 'agentMessage'].includes(item.type)) updateMessageActions();
+}
+let branching = false;
+function messageButton(parent, key, path, action) {
+  const button = node('button', null, parent);
+  button.type = 'button';
+  button.title = i18n(key);
+  button.setAttribute('aria-label', i18n(key));
+  button.dataset.messageAction = key;
+  button.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>`;
+  button.onclick = action;
+  return button;
+}
+function updateMessageActions() {
+  const messages = [...items.values()].filter((r) =>
+    ['userMessage', 'agentMessage'].includes(r.type),
+  );
+  const latest = messages.findLast((r) => r.type === 'userMessage');
+  for (const record of messages) {
+    if (!record.actions) continue;
+    let fork = record.actions.querySelector('[data-message-action="forkMessage"]');
+    if (!fork)
+      fork = messageButton(
+        record.actions,
+        'forkMessage',
+        'M7 5v14M7 12h5a5 5 0 0 0 5-5V5M5 3h4v4H5zM15 3h4v4h-4zM5 17h4v4H5z',
+        () => forkMessage(record),
+      );
+    fork.disabled = !ready || busy || branching || !record.completed;
+    let edit = record.actions.querySelector('[data-message-action="editMessage"]');
+    if (record === latest && !edit)
+      edit = messageButton(
+        record.actions,
+        'editMessage',
+        'm14 5 5 5M4 20l4-1L20 7a2 2 0 0 0-4-4L4 15z',
+        () => editMessage(record),
+      );
+    if (edit) {
+      edit.hidden = record !== latest;
+      edit.disabled = !ready || busy || branching;
+    }
+  }
+}
+async function forkMessage(record, input = null) {
+  if (branching || busy || !ready) return;
+  branching = true;
+  updateMessageActions();
+  try {
+    const result = await rpc('bridge/thread/forkMessage', {
+      messageId: record.item.id,
+      edit: !!input,
+    });
+    await newConversation(
+      { ...bridge.settings, model: $('model').value, effort: $('effort').value },
+      [],
+      { threadId: result.thread.id, input },
+    );
+  } catch (error) {
+    showError(error.message);
+  } finally {
+    branching = false;
+    updateMessageActions();
+  }
+}
+function editMessage(record) {
+  if (busy || branching || record.el.querySelector('.message-editor')) return;
+  const input = normalizeUserInput(record.item.content || []);
+  const editable = (p) =>
+    p.type === 'text' && !p.browserContext && !p.text.startsWith(i18n('selectionQuote') + '\n');
+  const editor = node('div', null);
+  editor.className = 'message-editor';
+  const textarea = node('textarea', null, editor);
+  textarea.value = input
+    .filter(editable)
+    .map((p) => p.text)
+    .join('\n\n');
+  textarea.setAttribute('aria-label', i18n('editMessage'));
+  const actions = node('div', null, editor);
+  actions.className = 'edit-actions';
+  const cancel = node('button', i18n('cancel'), actions);
+  cancel.type = 'button';
+  cancel.onclick = () => {
+    renderItem(record.item, true);
+    record.el.classList.remove('editing');
+  };
+  const submit = node('button', i18n('send'), actions);
+  submit.type = 'button';
+  submit.className = 'edit-send';
+  submit.onclick = async () => {
+    if (!textarea.value.trim() || branching || busy) return;
+    // Preserve attachments, annotations and the original page context verbatim.
+    const retained = input.filter((p) => !editable(p)).map(({ browserContext, ...p }) => p);
+    submit.disabled = cancel.disabled = textarea.disabled = true;
+    await forkMessage(record, [
+      ...retained,
+      { type: 'text', text: textarea.value.trim(), text_elements: [] },
+    ]);
+    submit.disabled = cancel.disabled = textarea.disabled = false;
+  };
+  textarea.onkeydown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      cancel.click();
+    }
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      submit.click();
+    }
+  };
+  record.el.replaceChildren(editor);
+  record.el.classList.add('editing');
+  textarea.focus();
+  textarea.style.height = Math.max(80, textarea.scrollHeight) + 'px';
+}
+async function sendEditedInput(input) {
+  const el = node('article', '', $('messages'));
+  el.className = 'message user';
+  renderUserInput(el, input);
+  node('span', i18n('sendingMessage'), el).className = 'delivery-status';
+  const submitted = { el, input, clientId: crypto.randomUUID(), type: 'userMessage' };
+  optimisticUsers.push(submitted);
+  setBusy(true);
+  try {
+    await deliverInput(submitted, false);
+  } catch (error) {
+    setBusy(false, 'failed');
+    recoverSteer(submitted);
+    showError(error.message);
   }
 }
 function title(name) {
@@ -934,10 +1071,31 @@ async function completeSetup() {
         i18n('newChat'),
     );
     const renderStarted = performance.now();
-    for (const turn of thread.turns || []) {
+    const turns = (thread.turns || []).map((turn) => {
+      const live = setupTurnUpdates.get(turn.id);
+      return live ? { ...turn, status: live.status, error: live.error } : turn;
+    });
+    const active = turns.find((t) => t.status === 'inProgress');
+    for (const turn of turns) {
       worklog = null;
-      for (const item of turn.items || [])
-        renderItem(item, true, turn.startedAt ? turn.startedAt * 1000 : Date.now());
+      if (turn === active && thread.status?.type === 'active') {
+        turnId = active.id;
+        setBusy(true);
+        const flags = thread.status.activeFlags || [];
+        waitingStatus = flags.includes('waitingOnApproval')
+          ? 'waitingApproval'
+          : flags.includes('waitingOnUserInput')
+            ? 'waitingAnswer'
+            : null;
+      }
+      for (const item of turn.items || []) {
+        const completed =
+          turn !== active ||
+          item.type === 'userMessage' ||
+          ['completed', 'failed', 'declined'].includes(item.status);
+        if (!items.has(item.id))
+          renderItem(item, completed, turn.startedAt ? turn.startedAt * 1000 : Date.now());
+      }
       if (turn.status !== 'inProgress' && turn.items?.length) {
         const outcome =
           turn.status === 'failed'
@@ -960,11 +1118,8 @@ async function completeSetup() {
         if (final) footer.append(items.get(final.id).actions);
       }
     }
-    const active = (thread.turns || []).find((t) => t.status === 'inProgress');
-    if (active && thread.status?.type === 'active') {
-      turnId = active.id;
-      setBusy(true);
-    } else {
+    if (busy) updateTurnStatus(i18n('working'));
+    else {
       followups.pause(thread.turns?.at(-1)?.status === 'interrupted');
     }
     scrollEnd();
@@ -978,6 +1133,8 @@ async function completeSetup() {
     }
     await composerSettings.applySaved();
     ready = true;
+    updateMessageActions();
+    setupTurnUpdates.clear();
     composerSettings.refresh();
     void refreshHistory();
     void relations.refresh();
@@ -1001,6 +1158,8 @@ async function completeSetup() {
     bridge.send('codexContext');
     $('prompt').focus();
     scrollEnd();
+    const forkInput = await takeForkInput();
+    if (forkInput?.length) await sendEditedInput(forkInput);
   } catch (e) {
     showError(e.message);
     $('connection').textContent = i18n('connectionFailed');
@@ -1528,11 +1687,14 @@ addWebUiListener('codex-message', (message) => {
       title(p.threadName);
       break;
     case 'turn/started':
+      if (!ready) setupTurnUpdates.set(p.turn.id, { ...p.turn, status: 'inProgress' });
       followups.pause(false);
       turnId = p.turn.id;
       setBusy(true);
       break;
     case 'turn/completed':
+      if (!ready)
+        setupTurnUpdates.set(p.turn.id, { ...p.turn, status: p.turn.status || 'completed' });
       if (turnId && p.turn.id !== turnId) break;
       turnId = null;
       setBusy(

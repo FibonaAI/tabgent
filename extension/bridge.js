@@ -122,9 +122,10 @@ export async function openConversationLink(url, active, newTab = true) {
   return result;
 }
 
-export async function newConversation(settings, annotations = []) {
+export async function newConversation(settings, annotations = [], fork = null) {
   const result = await chrome.runtime.sendMessage({
     type: 'newConversation',
+    fork,
     annotations,
     conversationKey: state.conversationKey,
     companionTabId: state.companionTabId,
@@ -154,4 +155,13 @@ export async function pageHistory(threadId) {
   });
   if (result?.error) throw Error(result.error);
   return result;
+}
+
+export async function takeForkInput() {
+  const result = await chrome.runtime.sendMessage({
+    type: 'takeForkInput',
+    conversationKey: state.conversationKey,
+  });
+  if (result.error) throw Error(result.error);
+  return result.input;
 }

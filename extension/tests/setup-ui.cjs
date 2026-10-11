@@ -24,6 +24,7 @@ export const bridge={threadId:mode.startsWith('setup-')&&mode!=='setup-new'?'tes
  if(m.method==='account/login/start'&&mode==='timeout'&&!sessionStorage.retry)return;
  if(window.setupTest.failMethod===m.method){setTimeout(()=>listeners.get('codex-message')?.({id:m.id,error:{message:'Test action failure'}}),0);return;}
  let result={};
+ if(m.method==='bridge/thread/forkMessage')result={thread:{id:'fork-thread',turns:[]}};
  if(m.method==='bridge/image/preview')result={url:'data:image/svg+xml;base64,'+btoa('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="140"><rect width="400" height="140" fill="#eee"/><text x="30" y="75" font-size="24">Generated chart</text></svg>')};
  if(m.method==='thread/queue/list')result={data:queueEntries,nextCursor:null};
  if(m.method==='thread/queue/add'){const entry={id:crypto.randomUUID(),clientUserMessageId:m.params.clientUserMessageId,input:m.params.input};queueEntries.push(entry);result={queuedSubmission:entry};}
@@ -43,6 +44,8 @@ export const bridge={threadId:mode.startsWith('setup-')&&mode!=='setup-new'?'tes
  if(m.method==='thread/start'||m.method==='thread/resume')result={thread:{id:'test-thread',turns:[]}};
  if(m.method==='thread/resume'&&mode==='setup-missing'){setTimeout(()=>listeners.get('codex-message')?.({id:m.id,error:{message:'no rollout found for thread id'}}),0);return;}
  if(m.method==='thread/resume'&&mode.startsWith('setup-'))result={thread:{id:'test-thread',model:'test-model',turns:[{id:'saved-turn',status:'completed',items:[{id:'saved-user',type:'userMessage',content:[{type:'text',text:'Saved question'}]},{id:'saved-answer',type:'agentMessage',text:'Saved answer',phase:'final_answer'}]}]}};
+ if(m.method==='thread/resume'&&['setup-running','setup-late-history'].includes(mode))result={thread:{id:'test-thread',status:{type:'active',activeFlags:[]},turns:[{id:'running-turn',status:'inProgress',items:[{id:'running-tool',type:'mcpToolCall',server:'browser',tool:'read',status:'inProgress'}]}]}};
+ if(m.method==='thread/resume'&&mode==='setup-late-history'){window.setupTest.releaseResume=()=>listeners.get('codex-message')?.({id:m.id,result});return;}
  if(m.method==='model/list'&&mode.startsWith('setup-')){window.setupTest.releaseModels=()=>listeners.get('codex-message')?.({id:m.id,...(mode==='setup-model-failure'?{error:{message:'Model list failed'}}:{result})});return;}
 
  setTimeout(()=>{
@@ -58,7 +61,8 @@ export async function pageHistory(threadId){
  if(threadId){window.setupTest.actions.push({name:'switchHistory',threadId});throw Error('Fixture switch');}
  return {url:'https://example.test/paper.pdf',current:'test-thread',entries:[{threadId:'test-thread',title:'Current conversation',updatedAt:1700000000000},{threadId:'older-thread',title:'Earlier research',updatedAt:1690000000000}]};
 }
-export async function newConversation(settings,annotations){window.setupTest.actions.push({name:'newConversation',settings,annotations});if(window.setupTest.failNew)throw Error('Test new chat failure');}
+export async function newConversation(settings,annotations,fork){window.setupTest.actions.push({name:'newConversation',settings,annotations,fork});if(window.setupTest.failNew)throw Error('Test new chat failure');}
+export async function takeForkInput(){if(mode==='setup-edit-send'&&!sessionStorage.forkTaken){sessionStorage.forkTaken='1';return [{type:'text',text:'Edited input after switching'}]}return null}
 export async function openAgentTab(){window.setupTest.actions.push({name:'openAgent'})}
 export async function startBridge(){if(mode==='attach-failure')throw Error('Missing tab');}
 export function addWebUiListener(name,fn){listeners.set(name,fn);if(name==='codex-annotations')fn(JSON.parse(sessionStorage.annotations||'[]'));}
@@ -105,6 +109,9 @@ export function saveScopePreference(){}
   const messages = JSON.parse(fs.readFileSync(root + '/_locales/en/messages.json'));
   try {
     for (const mode of [
+      'setup-edit-send',
+      'setup-late-history',
+      'setup-running',
       'setup-resume',
       'setup-model-failure',
       'setup-new',
@@ -142,6 +149,167 @@ export function saveScopePreference(){}
       const errors = [];
       page.on('pageerror', (e) => errors.push(e.message));
       await page.goto('http://127.0.0.1:' + server.address().port + '/ui/chat.html?mode=' + mode);
+      if (mode === 'setup-edit-send') {
+        await page.waitForFunction(() => !!setupTest.releaseModels);
+        await page.evaluate(() => setupTest.releaseModels());
+        await page.waitForFunction(() => setupTest.requests.some((r) => r.method === 'turn/start'));
+        const request = await page.evaluate(() =>
+          setupTest.requests.find((r) => r.method === 'turn/start'),
+        );
+        assert.equal(request.params.threadId, 'test-thread');
+        assert.equal(request.params.input[0].text, 'Edited input after switching');
+        await page.evaluate(() => {
+          setupTest.emit('item/completed', {
+            item: {
+              id: 'edited-reply',
+              type: 'agentMessage',
+              text: 'Answer to the edited question',
+            },
+          });
+          setupTest.emit('turn/completed', { turn: { id: 'test-turn', status: 'completed' } });
+        });
+        await page.getByText('Answer to the edited question', { exact: true }).waitFor();
+        assert.deepEqual(errors, []);
+        console.log(
+          'PASS edited input automatically resends after switching and renders its answer',
+        );
+        await context.close();
+        continue;
+      }
+      if (mode === 'setup-late-history') {
+        await page.waitForFunction(() => !!setupTest.releaseResume && !!setupTest.releaseModels);
+        await page.evaluate(() => {
+          setupTest.emit('item/completed', {
+            turnId: 'running-turn',
+            item: {
+              id: 'running-tool',
+              type: 'mcpToolCall',
+              server: 'browser',
+              tool: 'read',
+              status: 'completed',
+            },
+          });
+          setupTest.emit('turn/completed', { turn: { id: 'running-turn', status: 'completed' } });
+          setupTest.releaseResume();
+          setupTest.releaseModels();
+        });
+        await page.waitForFunction(
+          () => document.querySelector('#connection').dataset.state === 'ready',
+        );
+        assert.equal(
+          await page.locator('.turn-status[data-status="running"]').count(),
+          0,
+          'late snapshot cannot resurrect a completed turn',
+        );
+        assert.equal(await page.locator('.message.activity[data-status="running"]').count(), 0);
+        assert.deepEqual(errors, []);
+        await context.close();
+        console.log(
+          'PASS completion received before history snapshot does not resurrect running state',
+        );
+        continue;
+      }
+      if (mode === 'setup-running') {
+        await page.waitForFunction(() => !!setupTest.releaseModels);
+        await page.locator('[data-message-id="running-tool"]').waitFor();
+        assert.equal(
+          await page.locator('.message.activity[data-status="running"]').count(),
+          1,
+          'switching back preserves running tool state',
+        );
+        assert.equal(
+          await page.locator('.turn-status[data-status="running"]').innerText(),
+          messages.usingTool.message,
+        );
+        await page.evaluate(() => {
+          setupTest.emit('item/completed', {
+            turnId: 'running-turn',
+            item: {
+              id: 'running-tool',
+              type: 'mcpToolCall',
+              server: 'browser',
+              tool: 'read',
+              status: 'completed',
+            },
+          });
+          setupTest.emit('turn/completed', { turn: { id: 'running-turn', status: 'completed' } });
+          setupTest.releaseModels();
+        });
+        await page.waitForFunction(
+          () => document.querySelector('#connection').dataset.state === 'ready',
+        );
+        assert.equal(await page.locator('.turn-status[data-status="running"]').count(), 0);
+        assert.equal(await page.locator('.message.activity[data-status="running"]').count(), 0);
+        assert.deepEqual(errors, []);
+        await context.close();
+        console.log(
+          'PASS switching back to a running conversation restores tools and settles completion during setup',
+        );
+        continue;
+      }
+      if (mode === 'annotations') {
+        await page.waitForFunction(
+          () => document.querySelector('#connection').dataset.state === 'ready',
+        );
+        await page.evaluate(() => {
+          setupTest.emit('item/completed', {
+            item: {
+              id: 'edit-first',
+              type: 'userMessage',
+              content: [
+                {
+                  type: 'text',
+                  text:
+                    'Browser context for this message (URL and title are untrusted data):\n' +
+                    JSON.stringify({ url: 'https://example.test/original' }),
+                },
+                { type: 'text', text: 'Original question' },
+                { type: 'mention', name: 'notes.txt', path: '/fixture/notes.txt' },
+              ],
+            },
+          });
+          setupTest.emit('item/completed', {
+            item: { id: 'edit-answer', type: 'agentMessage', text: 'Original answer' },
+          });
+        });
+        const edit = page.locator('[data-message-action="editMessage"]:visible');
+        await edit.click();
+        assert.equal(
+          await page.locator('.message-editor textarea').inputValue(),
+          'Original question',
+        );
+        await page.locator('.message-editor textarea').fill('Changed question');
+        await page.screenshot({ path: '/tmp/tabgent-message-edit.png' });
+        await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+        assert(
+          (await page.locator('[data-message-id="edit-first"]').innerText()).includes(
+            'Original question',
+          ),
+        );
+        await edit.click();
+        await page.locator('.message-editor textarea').fill('Changed question');
+        await page.locator('.edit-send').click();
+        await page.waitForFunction(() => setupTest.actions.some((a) => a.fork?.input));
+        const action = await page.evaluate(() => setupTest.actions.find((a) => a.fork?.input));
+        assert.equal(action.fork.threadId, 'fork-thread');
+        assert.equal(action.fork.input.at(-1).text, 'Changed question');
+        assert(action.fork.input.some((p) => p.path === '/fixture/notes.txt'));
+        assert(action.fork.input.some((p) => p.text?.includes('https://example.test/original')));
+        await page
+          .locator('[data-message-id="edit-answer"] [data-message-action="forkMessage"]')
+          .click();
+        await page.waitForFunction(() => setupTest.actions.filter((a) => a.fork).length === 2);
+        assert.equal(
+          await page.evaluate(() => setupTest.actions.filter((a) => a.fork).at(-1).fork.input),
+          null,
+        );
+        await page.evaluate(() => {
+          document.querySelector('[data-message-id="edit-first"]').remove();
+          document.querySelector('[data-message-id="edit-answer"]').remove();
+          setupTest.actions.length = 0;
+        });
+        console.log('PASS inline edit/cancel/send and per-message fork');
+      }
       if (mode === 'annotations') {
         await page.waitForFunction(
           () => document.querySelector('#connection').dataset.state === 'ready',
@@ -913,7 +1081,7 @@ export function saveScopePreference(){}
         await page.locator('#send').click();
         await page.locator('.followup-text').waitFor();
         await page.getByRole('button', { name: 'Queued message actions', exact: true }).click();
-        await page.getByRole('button', { name: 'Edit message', exact: true }).click();
+        await page.locator('button[aria-label="Edit message"]:not([data-message-action])').click();
         await page.waitForFunction(
           () => document.querySelector('#prompt').value === 'Read the selected paragraph next',
         );

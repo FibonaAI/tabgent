@@ -156,6 +156,42 @@ const { chromium } = require('playwright');
     await structured('json', '{"unfinished":');
     assert(await page.locator('pre').isVisible());
     assert(await page.locator('.structured-toggle').isDisabled());
+    const diagram = async (source) =>
+      page.evaluate(async (source) => {
+        const { markdownFragment } = await import('/ui/markdown.js');
+        const { addMermaidView } = await import('/ui/mermaid-code.js');
+        const fragment = markdownFragment('```mermaid\n' + source + '\n```');
+        const pre = fragment.querySelector('pre');
+        const block = document.createElement('div');
+        block.className = 'code-block';
+        const heading = document.createElement('div');
+        heading.className = 'code-heading';
+        block.append(heading, pre);
+        addMermaidView(block, heading, pre, pre.querySelector('code'), (k) => k);
+        document.querySelector('#fixture').replaceChildren(block);
+      }, source);
+    const flow =
+      'flowchart TB\n I["当前画面"] --> E1["视觉编码器 · ViT"]\n E1 --> Z1["第一层状态<br/>保留较多细节"]\n Z1 --> P1["第一层预测器 · Transformer<br/>预测 1 步后的状态"]\n P1 --> H1["底层规划器"]';
+    await diagram(flow);
+    await page.locator('.mermaid-view img').waitFor();
+    await page.waitForFunction(() => document.querySelector('.mermaid-view img')?.naturalWidth > 0);
+    assert(!(await page.locator('pre').isVisible()));
+    await page.getByRole('button', { name: 'showCode', exact: true }).click();
+    assert.equal(await page.locator('pre code').textContent(), flow + '\n');
+    await page.getByRole('button', { name: 'showDiagram', exact: true }).click();
+    await page.screenshot({ path: '/tmp/tabgent-mermaid.png', fullPage: true });
+    await diagram('flowchart TB\n A["unfinished');
+    await page.getByText('diagramUnavailable', { exact: true }).waitFor();
+    assert(await page.locator('pre').isVisible());
+    await diagram('flowchart LR\n A --> B\n click A "javascript:alert(1)"');
+    await page.locator('.mermaid-view img').waitFor();
+    assert.equal(await page.locator('.mermaid-view a, .mermaid-view script').count(), 0);
+    assert.equal(await page.locator('.mermaid-render-host').count(), 0);
+    await diagram(flow); // A rerender/stream update reuses the completed diagram.
+    await page.locator('.mermaid-view img').waitFor();
+    console.log(
+      'PASS Mermaid Chinese flowchart, code toggle, invalid source fallback, safe image and rerender',
+    );
     console.log(
       'PASS math, code highlighting, aliases, exact code text, streaming, fallback and untrusted content',
     );

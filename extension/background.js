@@ -376,6 +376,11 @@ async function receive(message) {
         await persist();
         for (const port of s.ports) event(port, 'codex-history-changed');
       }
+      if (r.method === 'bridge/thread/forkMessage' && m.result?.thread?.id) {
+        s.messageForks ||= [];
+        s.messageForks.push(m.result.thread.id);
+        await persist();
+      }
       if (r.method === 'bridge/thread/relations' && m.result) {
         const entries = [...(m.result.parents || []), ...(m.result.children || [])];
         s.relatedThreads = entries.map((entry) => entry.threadId);
@@ -868,12 +873,29 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       if (!s) throw Error('Conversation not found');
       return openAgentTab(s, msg.windowId, msg.companionTabId ?? s.tabId);
     }
+    if (msg.type === 'takeForkInput') {
+      await loaded;
+      const source = sessions.get(msg.conversationKey);
+      const input = source?.forkInput || null;
+      if (source) {
+        delete source.forkInput;
+        await persist();
+      }
+      return { input };
+    }
     if (msg.type === 'newConversation') {
       await loaded;
       const source = sessions.get(msg.conversationKey);
       if (!source) throw Error('Conversation not found');
+      if (msg.fork?.threadId && !source.messageForks?.includes(msg.fork.threadId))
+        throw Error('Conversation fork is not available');
       const id = crypto.randomUUID();
       const session = {
+        threadId: msg.fork?.threadId,
+        forkInput: msg.fork?.input || null,
+        hasUserInput: Boolean(msg.fork?.threadId),
+        title: msg.fork?.threadId ? source.title : undefined,
+
         id,
         key: id,
         tabId: msg.companionTabId ?? source.tabId,
@@ -893,6 +915,7 @@ chrome.runtime.onMessage.addListener((msg, sender, reply) => {
       };
       await recordHistory(source);
       sessions.set(id, session);
+      if (msg.fork?.threadId) await recordHistory(session);
       if (sender.tab && agentViews.has(sender.tab.id)) {
         agentViews.set(sender.tab.id, id);
       } else {

@@ -61,7 +61,7 @@ fi
 exec "$connector_python" "${0:A:h}/native/install.py" --connector-only --extension-id EXTENSION_ID
 '''.replace("EXTENSION_ID", ext_id)
 with zipfile.ZipFile(output / "Tabgent-Connector-macOS.zip", "w", zipfile.ZIP_DEFLATED) as archive:
-    for name in ["install.py", "host.py", "attachments.py", "lineage.py"]:
+    for name in ["install.py", "host.py", "attachments.py", "lineage.py", "message_fork.py"]:
         archive.write(extension / "native" / name, "Tabgent Connector/native/" + name)
     entry = zipfile.ZipInfo("Tabgent Connector/Install Connector.command")
     entry.create_system = 3
