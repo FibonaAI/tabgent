@@ -36,13 +36,14 @@ A native new tab may be navigated to an HTTP(S) page without inspecting its UI.
 
 Tabgent is installed in `~/Library/Application Support/Tabgent/`, independently
 of Codex. Codex paths respect `CODEX_HOME`; the default is `~/.codex`.
-The workspace directory keeps its original `browser-agent-connector` identifier
-so existing conversations, lineage records, and attachment paths remain valid.
+The workspace is `$CODEX_HOME/projects/tabgent`. On upgrade, the previous
+`browser-agent-connector` directory is moved there and kept as a compatibility
+symlink so existing attachment paths remain valid.
 
 | Location                                                    | Contents                                                                |
 | ----------------------------------------------------------- | ----------------------------------------------------------------------- |
 | `~/Library/Application Support/Tabgent/`                    | Installed connector and, for normal installations, extension files.     |
-| `$CODEX_HOME/projects/browser-agent-connector/attachments/` | User-uploaded file copies, each in a generated subdirectory.            |
+| `$CODEX_HOME/projects/tabgent/attachments/` | User-uploaded file copies, each in a generated subdirectory.            |
 | Shared Codex session storage and index                      | Conversation history and project association.                           |
 | Chrome extension session storage                            | Tab bindings, selection drafts, text drafts, and attachment references. |
 
@@ -71,3 +72,5 @@ PDF.js renders documents locally in an extension page. PDF scripts and automatic
 alt-text model downloads are disabled. Opening a PDF alone does not send it to
 Codex; submitting a quote or asking Agent to read it supplies that context.
 Highlights and comments are saved only when you download the edited PDF.
+
+Webpage resources requested by the user are saved through Chrome Downloads, using browser authentication where applicable. Suggested filenames are placed under `Downloads/Tabgent`; Chrome may prompt or block a download according to its settings. Files are never automatically opened. Local file links in assistant replies can be opened with the default application or revealed in Finder when clicked.

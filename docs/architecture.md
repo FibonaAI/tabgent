@@ -103,7 +103,7 @@ root conversations; Agent + copies page context and settings only. Opening anoth
 view of the same Agent is not a branch.
 
 Relationships are journaled under
-`$CODEX_HOME/projects/browser-agent-connector/lineage/`. The native host checks
+`$CODEX_HOME/projects/tabgent/lineage/`. The native host checks
 rollout markers to deduplicate retries, and flushes pending notes on resume and
 before new input. Closed parents can be resumed briefly to record their note;
 locked/unavailable threads retain pending notes until the connector can access them.

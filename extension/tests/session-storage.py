@@ -22,6 +22,11 @@ with tempfile.TemporaryDirectory(
         'web_search="live"\n[features]\nshell_tool=true\nunified_exec=true\n'
         'multi_agent=true\napps=false\ncode_mode=true\n'
     )
+    previous = Path(directory) / "projects/browser-agent-connector"
+    (previous / "attachments").mkdir(parents=True)
+    (previous / "attachments/example.txt").write_text("retained attachment")
+    (previous / "lineage").mkdir()
+    (previous / "lineage/example.json").write_text("{}")
     before = config.read_bytes()
     first = host.Session("first", {})
     second = host.Session("second", {})
@@ -29,6 +34,11 @@ with tempfile.TemporaryDirectory(
         first.start()
         second.start()
         assert first.ready and second.ready
+        workspace = Path(directory) / "projects/tabgent"
+        assert previous.is_symlink() and previous.resolve() == workspace.resolve()
+        assert (previous / "attachments/example.txt").read_text() == "retained attachment"
+        assert (workspace / "lineage/example.json").read_text() == "{}"
+        assert host.prepare_workspace() == workspace
         effective = first.rpc("config/read", {})["config"]
         assert effective["web_search"] == "live", effective
         for flag in ["shell_tool", "unified_exec", "multi_agent", "code_mode"]:
@@ -42,10 +52,20 @@ with tempfile.TemporaryDirectory(
         assert first.project_id == second.project_id
         project = first.rpc("project/read", {"projectId": first.project_id})["project"]
         assert project["name"] == "Tabgent"
+        assert Path(project["roots"][0]["path"]).resolve() == workspace.resolve()
+        first.rpc("project/update", {"projectId": first.project_id, "roots": [{"path": str(previous)}]})
+        third = host.Session("third", {})
+        try:
+            third.start()
+            updated = third.rpc("project/read", {"projectId": first.project_id})["project"]
+            assert third.project_id == first.project_id
+            assert updated["roots"][0]["path"].endswith("/projects/tabgent")
+        finally:
+            third.close()
         thread = first.rpc("thread/start", first.thread_params({}))["thread"]
         assert thread["projectId"] == first.project_id
         assert thread["cwd"] == str(
-            Path(directory) / "projects/browser-agent-connector"
+            Path(directory) / "projects/tabgent"
         )
         assert config.read_bytes() == before
         assert not (Path(directory) / "auth.json").exists()

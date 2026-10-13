@@ -61,5 +61,11 @@
   },
   "send": {
     "message": "发送"
+  },
+  "openLocalFile": {
+    "message": "打开文件"
+  },
+  "revealLocalFile": {
+    "message": "在 Finder 中显示"
   }
 }

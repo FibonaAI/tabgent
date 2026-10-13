@@ -13,6 +13,7 @@ import time
 import uuid
 import attachments
 import lineage
+import local_files
 import message_fork
 
 HOME = Path(os.environ.get("CODEX_HOME", Path.home() / ".codex"))
@@ -21,6 +22,20 @@ START_LOCK = threading.Lock()
 SESSIONS = {}
 POOL = concurrent.futures.ThreadPoolExecutor(max_workers=8)
 CONFIG = None
+
+
+def prepare_workspace():
+    workspace = HOME / "projects/tabgent"
+    previous = HOME / "projects/browser-agent-connector"
+    with START_LOCK:
+        if previous.exists() and not previous.is_symlink():
+            if workspace.exists():
+                raise RuntimeError("Both Tabgent workspace directories exist; preserve their contents before merging them")
+            previous.rename(workspace)
+            # Older messages store absolute attachment paths and working directories.
+            previous.symlink_to(workspace, target_is_directory=True)
+        workspace.mkdir(parents=True, exist_ok=True)
+    return workspace
 
 
 def send(value):
@@ -164,7 +179,7 @@ class Session:
                             if isinstance(args, str):
                                 args = json.loads(args)
                             value = attachments.read(
-                                HOME / "projects/browser-agent-connector/attachments",
+                                HOME / "projects/tabgent/attachments",
                                 args,
                             )
                             result = {
@@ -227,10 +242,9 @@ class Session:
             return
         HOME.mkdir(parents=True, exist_ok=True)
         os.chmod(HOME, 0o700)
-        workspace = HOME / "projects/browser-agent-connector"
-        workspace.mkdir(parents=True, exist_ok=True)
         self.auth = auth_stamp()
         try:
+            workspace = prepare_workspace()
             if self.closed:
                 return
             self.process = subprocess.Popen(
@@ -267,7 +281,12 @@ class Session:
                         "roots": [{"path": str(workspace)}],
                     },
                 )
-            self.project_id = project["project"]["id"]
+                self.project_id = project["project"]["id"]
+                roots = project["project"].get("roots", [])
+                if len(roots) != 1 or Path(roots[0]["path"]) != workspace.resolve():
+                    self.rpc("project/update", {
+                        "projectId": self.project_id, "roots": [{"path": str(workspace)}],
+                    })
             account = self.rpc("account/read")
             self.setup_results = {"account/read": account}
             if account.get("account") or account.get("requiresOpenaiAuth") is False:
@@ -306,7 +325,7 @@ class Session:
     def thread_params(self, params):
         return {
             **params,
-            "cwd": str(HOME / "projects/browser-agent-connector"),
+            "cwd": str(HOME / "projects/tabgent"),
             "projectId": self.project_id,
             "dynamicTools": [
                 *(params.get("dynamicTools") or self.config.get("dynamicTools", [])),
@@ -429,7 +448,7 @@ class Session:
         if method == "bridge/attachment/save":
             try:
                 result = attachments.save(
-                    HOME / "projects/browser-agent-connector/attachments",
+                    HOME / "projects/tabgent/attachments",
                     message["params"]["name"],
                     message["params"]["data"],
                 )
@@ -455,13 +474,23 @@ class Session:
                     self.emit({'id': message['id'], 'error': {'code': -32000, 'message': 'Image unavailable'}})
             POOL.submit(image_preview)
             return
+        if method == "bridge/file/open":
+            def open_file():
+                try:
+                    thread = self.rpc('thread/read', {'threadId': self.thread['id'], 'includeTurns': True})['thread']
+                    result = local_files.open_shared(thread, message['params']['path'], message['params'].get('reveal') is True)
+                    self.emit({'id': message['id'], 'result': result})
+                except Exception as error:
+                    self.emit({'id': message['id'], 'error': {'code': -32000, 'message': str(error)}})
+            POOL.submit(open_file)
+            return
         if method == "bridge/attachment/preview":
             try:
                 self.emit(
                     {
                         "id": message["id"],
                         "result": attachments.preview(
-                            HOME / "projects/browser-agent-connector/attachments",
+                            HOME / "projects/tabgent/attachments",
                             message["params"],
                         ),
                     }

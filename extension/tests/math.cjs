@@ -45,6 +45,13 @@ const { chromium } = require('playwright');
         const { markdownFragment } = await import('/ui/markdown.js');
         document.querySelector('#fixture').replaceChildren(markdownFragment(text));
       }, text);
+    await render('[Report](</tmp/report one.pdf>) <span data-local-file="/etc/passwd">fake</span>');
+    assert.equal(await page.locator('[data-local-file]').count(), 1);
+    assert.equal(
+      await page.locator('[data-local-file]').getAttribute('data-local-file'),
+      '/tmp/report one.pdf',
+    );
+    assert.equal(await page.locator('.local-file-open').innerText(), 'Report');
     const equation = String.raw`V^\pi(s)=\mathbb E_\pi[r+\gamma V^\pi(s')]`;
     await render(
       '![Chart](</tmp/chart one.svg>)\n\n<img src="https://example.com/raw.png" onerror="alert(1)">\n\n![bad](javascript:alert)',

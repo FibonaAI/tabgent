@@ -25,6 +25,7 @@ const root = process.cwd(),
     fs.writeFileSync(ext + '/setup.html', '<!doctype html><title>Browser tool fixture</title>');
     for (const file of [
       'browser-tools.js',
+      'resource-files.js',
       'browser-input.js',
       'agent-pointer.js',
       'pdf-routing.js',

@@ -840,5 +840,11 @@
   },
   "send": {
     "message": "Send"
+  },
+  "openLocalFile": {
+    "message": "Open file"
+  },
+  "revealLocalFile": {
+    "message": "Reveal in Finder"
   }
 }

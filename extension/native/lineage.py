@@ -12,7 +12,7 @@ def record(home, parent, child, source):
         return
     # Thread IDs are also used in filenames; never accept paths here.
     parent, child = str(uuid.UUID(parent)), str(uuid.UUID(child))
-    root = home / 'projects/browser-agent-connector/lineage'
+    root = home / 'projects/tabgent/lineage'
     root.mkdir(parents=True, exist_ok=True)
     path = root / f'{parent}_{child}.json'
     with LOCK:
@@ -30,7 +30,7 @@ def flush(session, home):
     if not session.ready or not session.thread:
         return
     ident = session.thread['id']
-    root = home / 'projects/browser-agent-connector/lineage'
+    root = home / 'projects/tabgent/lineage'
     completed = getattr(session, 'lineage_completed', set())
     session.lineage_completed = completed
     with session.lineage_lock:
@@ -72,7 +72,7 @@ def relatives(session, home):
     if not session.thread:
         return {'parents': [], 'children': []}
     ident = session.thread['id']
-    root = home / 'projects/browser-agent-connector/lineage'
+    root = home / 'projects/tabgent/lineage'
     result = {'parents': [], 'children': []}
     with LOCK:
         for path in [*root.glob(f'{ident}_*.json'), *root.glob(f'*_{ident}.json')]:
@@ -122,7 +122,7 @@ def discard_empty(session, home):
                 text = ''.join(part.get('text', '') for part in message.get('content', []))
                 if not text.startswith('Browser conversation lineage (context only; no reply required).\n'):
                     return
-    root = home / 'projects/browser-agent-connector/lineage'
+    root = home / 'projects/tabgent/lineage'
     with LOCK:
         root.mkdir(parents=True, exist_ok=True)
         (root / f'{ident}.discarded').touch(mode=0o600)

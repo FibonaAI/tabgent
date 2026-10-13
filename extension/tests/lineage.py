@@ -59,7 +59,7 @@ with patch.object(host.Session, 'rpc', fixture_rpc), tempfile.TemporaryDirectory
             assert not lineage.relatives(parent, home)['children']
             lineage.record(home, parent.thread['id'], child_id, {})
             assert not lineage.relatives(parent, home)['children'], 'Late events must not recreate discarded branches'
-            assert (home / 'projects/browser-agent-connector/lineage' / f'{child_id}.discarded').exists()
+            assert (home / 'projects/tabgent/lineage' / f'{child_id}.discarded').exists()
         finally:
             cleanup.close()
         print('PASS durable reciprocal lineage / no generated turns / idempotent delivery / history readable after close')

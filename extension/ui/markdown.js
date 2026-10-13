@@ -8,6 +8,7 @@ import hljs from '../vendor/highlight/highlight.js';
 export function markdownFragment(text) {
   const formulas = [];
   const images = [];
+  const files = [];
   const marker = `math-${crypto.randomUUID()}`;
   const renderer = (token) => {
     const index = formulas.push(token) - 1;
@@ -16,6 +17,13 @@ export function markdownFragment(text) {
   const parser = new Marked({
     gfm: true,
     renderer: {
+      link(token) {
+        if (/^\/(?!\/)|^file:\/\//i.test(token.href)) {
+          const index = files.push(token) - 1;
+          return `<span data-${marker}-file="${index}"></span>`;
+        }
+        return false;
+      },
       image(token) {
         const index = images.push(token) - 1;
         return `<span data-${marker}-image="${index}"></span>`;
@@ -64,7 +72,7 @@ export function markdownFragment(text) {
   const fragment = DOMPurify.sanitize(parser.parse(text), {
     RETURN_DOM_FRAGMENT: true,
     FORBID_TAGS: ['img', 'style', 'input', 'button', 'form', 'iframe', 'svg', 'video', 'audio'],
-    FORBID_ATTR: ['style', 'id', 'name'],
+    FORBID_ATTR: ['style', 'id', 'name', 'data-local-file'],
   });
   for (const placeholder of fragment.querySelectorAll(`[data-${marker}-image]`)) {
     const token = images[Number(placeholder.getAttribute(`data-${marker}-image`))];
@@ -81,6 +89,18 @@ export function markdownFragment(text) {
       continue;
     }
     placeholder.replaceWith(img);
+  }
+  for (const placeholder of fragment.querySelectorAll(`[data-${marker}-file]`)) {
+    const token = files[Number(placeholder.getAttribute(`data-${marker}-file`))];
+    const link = document.createElement('span');
+    link.className = 'local-file';
+    link.dataset.localFile = token.href;
+    const label = document.createElement('button');
+    label.type = 'button';
+    label.className = 'local-file-open';
+    label.textContent = token.text || token.href.split('/').pop();
+    link.append(label);
+    placeholder.replaceWith(link);
   }
   for (const code of fragment.querySelectorAll('pre code')) {
     const language = [...code.classList]

@@ -35,17 +35,18 @@ browser actions are available from this same user-directed workflow.
 
 ## Permission justifications
 
-| Permission                            | Implemented use                                                         |
-| ------------------------------------- | ----------------------------------------------------------------------- |
-| `sidePanel`                           | Display the conversation next to the current webpage.                   |
-| `storage`                             | Save preferences, page/chat associations and temporary tab/draft state. |
-| `tabs`                                | Identify the page attached to each message and switch related tabs.     |
-| `webNavigation`                       | Track navigation and linked-tab origins for conversation context.       |
-| HTTP(S) hosts and `scripting`         | Read pages and selections across user-chosen sites, including frames.   |
-| `debugger`                            | Send browser input and capture screenshots for requested browser tasks. |
-| `nativeMessaging`                     | Communicate with the separately installed local Codex connector.        |
-| `contextMenus`                        | Quote selected text, including from Chrome's native PDF viewer.         |
-| `declarativeNetRequestWithHostAccess` | Route online PDFs into the bundled viewer, with native-viewer fallback. |
+| Permission                            | Implemented use                                                                          |
+| ------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `sidePanel`                           | Display the conversation next to the current webpage.                                    |
+| `storage`                             | Save preferences, page/chat associations and temporary tab/draft state.                  |
+| `downloads`                           | Save user-requested page resources and report download completion; never auto-open them. |
+| `tabs`                                | Identify the page attached to each message and switch related tabs.                      |
+| `webNavigation`                       | Track navigation and linked-tab origins for conversation context.                        |
+| HTTP(S) hosts and `scripting`         | Read pages and selections across user-chosen sites, including frames.                    |
+| `debugger`                            | Send browser input and capture screenshots for requested browser tasks.                  |
+| `nativeMessaging`                     | Communicate with the separately installed local Codex connector.                         |
+| `contextMenus`                        | Quote selected text, including from Chrome's native PDF viewer.                          |
+| `declarativeNetRequestWithHostAccess` | Route online PDFs into the bundled viewer, with native-viewer fallback.                  |
 
 ## Data and code
 

@@ -1,3 +1,4 @@
+import { saveResource, downloadStatus } from './resource-files.js';
 import { agentPointer } from './agent-pointer.js';
 import { pdfSource, pdfTab, pdfCommand } from './pdf-routing.js';
 import { nativeInput } from './browser-input.js';
@@ -107,6 +108,9 @@ async function operate(session, args, id, readPdf) {
     await check();
     return result;
   }
+  if (['resources', 'saveResource'].includes(args.action))
+    return saveResource(id, args, check, session);
+  if (args.action === 'downloadStatus') return downloadStatus(args.downloadId, session);
   // Only one pointer per tab, including when operations cross iframe boundaries.
   if (['click', 'hover', 'scroll', 'drag', 'check', 'select'].includes(args.action))
     await agentPointer(id, null, null);
@@ -278,8 +282,7 @@ function pageAction(args) {
   const visible = (el) =>
     el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden';
   if (args.action === 'read') {
-    for (const el of query('[data-tabgent-ref]'))
-      el.removeAttribute('data-tabgent-ref');
+    for (const el of query('[data-tabgent-ref]')) el.removeAttribute('data-tabgent-ref');
     const prefix = crypto.randomUUID().slice(0, 8);
     const elements = query(
       'a,button,input,textarea,select,[role="button"],[role="checkbox"],[role="combobox"],[contenteditable="true"],canvas,iframe',

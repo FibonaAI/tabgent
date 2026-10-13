@@ -8,6 +8,7 @@
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyMiIFYA3ghG727zaK7md1UcuvajRK3km/K3uUXrwK9USWrz7RiqkgRHG16o8uZuAJBogEGoloWW4JaMTsegNFdVzzi7J13E+ETYdF8Ykrl7EUaWFdloLd32dNQND9aAPOCE6qF2WOTQNdqLpeEGTNKhNE6OrU+PWLM0mMg5ZaPJLp8qoYxHXXqmMwR1EVyu0xORKVVIz4cD25tzuzssOX30CbysxRzJ5YpbGfFx/UPrTKAuw6QTbQOu94D4GGSCW35Ksonb3nF5gG6fPrhgCQJVDomWJI71GTa8fZJp5A9VDZA5fZytzvN/MExMyxHpCFzf6AB9N6/Q65m2bkjaDmwIDAQAB",
   "permissions": [
     "tabs",
+    "downloads",
     "storage",
     "scripting",
     "nativeMessaging",

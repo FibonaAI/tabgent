@@ -32,7 +32,7 @@ promise deletion from providers or a particular provider training policy.
 The connector is installed in `~/Library/Application Support/Tabgent`. Codex login,
 configuration and conversation history remain in the Codex data directory, usually
 `~/.codex` or the configured `CODEX_HOME`. Uploaded copies are stored under
-`projects/browser-agent-connector/attachments/` in that directory. Chrome stores
+`projects/tabgent/attachments/` in that directory. Chrome stores
 extension preferences, page/chat associations and temporary tab/draft state.
 
 Removing an attachment from a draft does not delete its uploaded copy. There is

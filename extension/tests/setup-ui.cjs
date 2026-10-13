@@ -308,6 +308,29 @@ export function saveScopePreference(){}
           document.querySelector('[data-message-id="edit-answer"]').remove();
           setupTest.actions.length = 0;
         });
+        await page.evaluate(() =>
+          setupTest.emit('item/completed', {
+            item: {
+              id: 'shared-file',
+              type: 'agentMessage',
+              text: '[Report](</tmp/example report.pdf>)',
+            },
+          }),
+        );
+        await page.locator('[data-message-id="shared-file"] .local-file-open').click();
+        await page.waitForFunction(() =>
+          setupTest.requests.some((r) => r.method === 'bridge/file/open'),
+        );
+        assert.equal(
+          await page.evaluate(
+            () => setupTest.requests.find((r) => r.method === 'bridge/file/open').params.path,
+          ),
+          '/tmp/example report.pdf',
+        );
+        await page.locator('[data-message-id="shared-file"] .local-file-reveal').click();
+        await page.waitForFunction(() =>
+          setupTest.requests.some((r) => r.method === 'bridge/file/open' && r.params.reveal),
+        );
         console.log('PASS inline edit/cancel/send and per-message fork');
       }
       if (mode === 'annotations') {

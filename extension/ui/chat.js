@@ -299,6 +299,31 @@ for (const type of ['click', 'auxclick'])
 // CommonMark/GFM parsing with sanitized DOM; never execute model-supplied HTML.
 function markdown(target, text) {
   const fragment = markdownFragment(text);
+  for (const file of fragment.querySelectorAll('[data-local-file]')) {
+    const open = file.querySelector('button');
+    const reveal = node('button', null, file);
+    reveal.type = 'button';
+    reveal.className = 'local-file-reveal';
+    reveal.innerHTML =
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8V6a2 2 0 0 1 2-2h4.5l2 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8Zm0 1h18"/></svg>';
+    open.title = i18n('openLocalFile');
+    reveal.title = i18n('revealLocalFile');
+    reveal.setAttribute('aria-label', i18n('revealLocalFile'));
+    for (const button of [open, reveal])
+      button.onclick = async () => {
+        button.disabled = true;
+        try {
+          await rpc('bridge/file/open', {
+            path: file.dataset.localFile,
+            reveal: button === reveal,
+          });
+        } catch (error) {
+          showError(error.message);
+        } finally {
+          button.disabled = false;
+        }
+      };
+  }
   for (const img of fragment.querySelectorAll('img')) {
     enableImagePreview(img);
     img.onerror = () =>

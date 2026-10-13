@@ -1926,3 +1926,25 @@ body.history-open {
   top: 100%;
   right: 0;
 }
+
+.local-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 100%;
+  vertical-align: baseline;
+}
+.local-file-open {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0;
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+.local-file-reveal {
+  display: inline-flex;
+  padding: 3px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
